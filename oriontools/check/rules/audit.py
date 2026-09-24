@@ -111,10 +111,12 @@ def _woordregel(ctx, regel, lijst, extra_sleutel, boodschap):
 
 
 class AuditSkip(AuditRegel):
-    """Een audit-skip noemt een regel die bestaat.
+    """Een audit-skip noemt een regel die bestaat, en blijft zichtbaar.
 
     Een tikfout in een audit-skip zet stil niets uit, en dat is precies het
-    soort stille no-op waartegen de hele check bestaat.
+    soort stille no-op waartegen de hele check bestaat. Een geldige skip wordt
+    niet als bevinding gemeld maar wel opgesomd, als afwijking: wat een pagina
+    bewust anders doet, moet bij elke audit nog eens langs de lezer komen.
     """
 
     id = "audit-skip"
@@ -123,9 +125,12 @@ class AuditSkip(AuditRegel):
         geldig = {cls.id.removeprefix("audit-") for cls in REGISTER.values()
                   if cls.modus == "audit" and cls.id != self.id}
         for pad in ctx.paginas:
-            for naam in sorted(skips(ctx, pad) - geldig):
-                ctx.waarschuw(pad, f"onbekende audit-skip '{naam}' (geldig: "
-                                   f"{' '.join(sorted(geldig))})")
+            for naam in sorted(skips(ctx, pad)):
+                if naam in geldig:
+                    ctx.meld(pad, f"audit-skip: {naam}", "afwijking")
+                else:
+                    ctx.waarschuw(pad, f"onbekende audit-skip '{naam}' (geldig: "
+                                       f"{' '.join(sorted(geldig))})")
 
 
 class AuditCodeKlasse(AuditRegel):

@@ -45,6 +45,11 @@ class Context:
         self.bevindingen.append(Bevinding(self._huidige_regel, self._rel(pad), boodschap,
                                           "waarschuwing", regelnr))
 
+    def meld(self, pad, boodschap, ernst, regelnr=None):
+        """Een melding die geen fout en geen waarschuwing is (een afwijking)."""
+        self.bevindingen.append(Bevinding(self._huidige_regel, self._rel(pad), boodschap,
+                                          ernst, regelnr))
+
     def _rel(self, pad):
         try:
             return pad.relative_to(self.root).as_posix()

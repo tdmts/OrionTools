@@ -125,7 +125,8 @@ def main(argv):
 
 def rapporteer(ctx, hook):
     fouten = [b for b in ctx.bevindingen if b.ernst == "fout"]
-    rest = [b for b in ctx.bevindingen if b.ernst != "fout"]
+    waarschuwingen = [b for b in ctx.bevindingen if b.ernst == "waarschuwing"]
+    afwijkingen = [b for b in ctx.bevindingen if b.ernst == "afwijking"]
     if hook:
         if not fouten:
             return 0
@@ -133,13 +134,17 @@ def rapporteer(ctx, hook):
             print(f"  FOUT [{b.regel}] {b.plaats()}: {b.boodschap}", file=sys.stderr)
         print(f"\n{len(fouten)} fout(en). Los ze op voor je afrondt.", file=sys.stderr)
         return 2
-    for b in rest:
-        label = "waarschuwing" if b.ernst == "waarschuwing" else b.ernst
-        print(f"  {label:12}  [{b.regel}] {b.plaats()}: {b.boodschap}")
+    if afwijkingen:
+        print("Afwijkingen die de pagina zelf vastlegt:")
+        for b in afwijkingen:
+            print(f"  {b.plaats()}: {b.boodschap}")
+        print()
+    for b in waarschuwingen:
+        print(f"  waarschuwing  [{b.regel}] {b.plaats()}: {b.boodschap}")
     for b in fouten:
         print(f"  FOUT          [{b.regel}] {b.plaats()}: {b.boodschap}")
     if fouten:
-        print(f"\n{len(fouten)} fout(en), {len(rest)} waarschuwing(en).")
+        print(f"\n{len(fouten)} fout(en), {len(waarschuwingen)} waarschuwing(en).")
         return 1
-    print(f"\nAlles in orde. {len(rest)} waarschuwing(en).")
+    print(f"\nAlles in orde. {len(waarschuwingen)} waarschuwing(en).")
     return 0
