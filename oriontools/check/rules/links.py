@@ -26,21 +26,27 @@ class Links(Regel):
 
     Ze kijkt naar elke html in de repo, ook naar een deck en een pagina die
     geen sitepagina is: een link of afbeelding die niet bestaat, drukt in een
-    handout als een leeg vlak.
+    handout als een leeg vlak. Alleen check.skip_pages valt erbuiten.
+
+    Een pad onder /d2l/ is van Brightspace zelf (een LTI-quicklink op een
+    Resultaat-pagina): het lost op op het platform dat de pagina serveert, niet
+    in de repo. Een protocol-relatieve //host, tel: en javascript: wijzen
+    evenmin naar een bestand van de repo.
     """
 
     id = "links"
-    legacy = ("DeN:1", "ICEES:1")
+    legacy = ("DeN:1", "ICEES:1", "MC:1", "IR:1")
 
     def controleer(self, ctx):
         getrackt = ctx.getrackt
         if getrackt is None:
             ctx.waarschuw(".", "git niet beschikbaar, de controle op getrackte bestanden "
                                "is overgeslagen")
-        for pad in ctx.html:
+        for pad in ctx.paginas:
             for m in URL_RE.finditer(ctx.tekst(pad)):
                 url = m.group(1)
-                if url.startswith(("http://", "https://", "#", "mailto:", "data:")):
+                if url.startswith(("http://", "https://", "//", "/d2l/", "#", "mailto:", "tel:",
+                                   "data:", "javascript:")):
                     continue
                 doel = lokaal_doel(pad, url)
                 if doel is None:

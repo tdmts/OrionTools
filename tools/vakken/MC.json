@@ -1,5 +1,23 @@
 {
   "course": {"code": "MC", "title": "Microcontrollers"},
-  "check": {"orphan_roots": ["."]},
-  "export_pdf": {"group": "lab"}
+  "check": {
+    "orphan_roots": ["."],
+    "skip_pages": ["template.html"],
+    "exercise_title_words": ["oefening"],
+    "audit": {
+      "diminutives_extra": ["chipje", "lusje", "sketchje", "functietje", "looplichtje",
+                            "lichtpuntje", "flitsje", "plaatsjes?", "meetstapjes?"],
+      "identifier_words": ["pinLed", "pinLED", "pinButton", "pinPot", "pinPotentiometer",
+                           "pinSensor", "pinAnalogIn", "pinNoodstop", "pinDigitSelect",
+                           "valuePotentiometer", "potValue", "ledValue", "delayValue",
+                           "buttonState", "lastReading", "currentMillis", "previousMillis",
+                           "risingEdge", "brightness", "isEnabled", "fullStep", "halfStep",
+                           "blinkLed", "voltage"],
+      "code_languages": ["cpp"],
+      "page_patterns": ["Labo*/Exercises/*", "Labo*/Reference/*"],
+      "exercise_patterns": ["Labo*/Exercises/*"]
+    }
+  },
+  "import_brightspace": {"max_mb": 25},
+  "export_pdf": {"group": "lab", "naam": "Labo{n}"}
 }

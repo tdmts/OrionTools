@@ -77,6 +77,20 @@ class Context:
         return [p for p in sorted(self.root.rglob("*.html")) if not self.overgeslagen(p)]
 
     @cached_property
+    def paginas(self):
+        """De html die de regels nakijken: alles buiten check.skip_pages.
+
+        Een stijlgids (template.html in Microcontrollers) demonstreert elke
+        component, ook met demo-afbeeldingen van een andere server en links naar
+        bestanden die de repo niet heeft. Alleen em-dash en code-style kijken er
+        wel naar, via html: de codevoorbeelden van de stijlgids zetten de
+        huisstijl voor alles wat eruit gekopieerd wordt.
+        """
+        skip = set(self.config["check"]["skip_pages"])
+        return [p for p in self.html
+                if p.name not in skip and p.relative_to(self.root).as_posix() not in skip]
+
+    @cached_property
     def sitepaginas(self):
         """De html die een pagina van de site is: geen exempt, geen deck."""
         exempt = set(self.config["exempt_pages"])

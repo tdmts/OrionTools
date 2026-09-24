@@ -1,5 +1,6 @@
 """orion.json, het Orion-menu: klopt het met de bestanden, en respecteert een pagina het."""
 
+import json
 import os
 import re
 from pathlib import Path
@@ -17,10 +18,19 @@ class OrionDoelen(Regel):
     dode link, terwijl de pagina lokaal gewoon opent. Een kapotte orion.json
     wordt hier gemeld, een keer; de andere regels die het menu lezen, zien dan
     een leeg menu.
+
+    Drie dingen meer, uit de bash-check van Microcontrollers en IR:
+
+    - het pad is een kaal pad vanaf de root (geen ./, geen .., geen dubbele
+      slash): de sync zoekt het doel op onder die naam;
+    - een page is een .html; een PDF of zip is een file, en als page krijgt
+      hij een topic dat de iframe niet kan tonen;
+    - het doel zit in git, want OrionSync spiegelt alleen wat getrackt is. Een
+      doel dat lokaal bestaat maar niet gecommit is, is in Orion een dood topic.
     """
 
     id = "orion-targets"
-    legacy = ("DeN:2", "ICEES:2")
+    legacy = ("DeN:2", "ICEES:2", "MC:2", "IR:2")
 
     def van_toepassing(self, ctx):
         return heeft_orion(ctx)
@@ -29,13 +39,71 @@ class OrionDoelen(Regel):
         doelen, fout = orion_doelen(ctx)
         if fout:
             ctx.fout("orion.json", fout)
+        getrackt = ctx.getrackt
         for soort, doel in doelen:
+            kaal = "/".join(s for s in doel.split("/") if s not in ("", "."))
+            if kaal != doel or ".." in doel.split("/"):
+                ctx.fout("orion.json", f"{soort} is geen kaal pad vanaf de root: {doel}")
+                continue
+            if soort == "page" and not doel.endswith(".html"):
+                ctx.fout("orion.json", f'page is geen html, gebruik "file": {doel}')
             pad = ctx.root / doel
+            if pad.name.startswith("TODO-"):
+                continue
             if not pad.is_file():
                 ctx.fout("orion.json", f"{soort} bestaat niet: {doel}")
             elif not ctx.exacte_hoofdletters(pad):
                 ctx.fout("orion.json",
                          f"hoofdletters kloppen niet, dit wordt een dode link in Orion: {doel}")
+            elif getrackt is not None and doel not in getrackt:
+                ctx.fout("orion.json", f"{soort} zit niet in git, dus de sync laadt het nooit "
+                                       f"op: {doel}")
+
+
+ID_RE = re.compile(r"^[a-z0-9-]+$")
+
+
+def _ids(item, uit):
+    if isinstance(item, dict):
+        if "id" in item:
+            uit.append(item["id"])
+        for waarde in item.values():
+            _ids(waarde, uit)
+    elif isinstance(item, list):
+        for kind in item:
+            _ids(kind, uit)
+    return uit
+
+
+class OrionIds(Regel):
+    """Elke id in orion.json is kebab (kleine letters, cijfers, streepjes) en uniek.
+
+    De sync maakt voor elk item een topic of module en onthoudt het onder zijn
+    id. Een id die twee keer voorkomt, laat twee items een record delen: het
+    ene overschrijft het andere bij elke sync, en in Orion verdwijnt een topic
+    zonder dat iets faalt. De vorm houdt de ids bruikbaar als sleutel en in een
+    bestandsnaam (export_pdf.naam gebruikt {id}).
+    """
+
+    id = "orion-ids"
+    legacy = ("MC:2", "IR:2")
+
+    def van_toepassing(self, ctx):
+        return heeft_orion(ctx)
+
+    def controleer(self, ctx):
+        try:
+            doc = json.loads((ctx.root / "orion.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return  # orion-targets meldt een kapot bestand
+        gezien = set()
+        for rid in _ids(doc, []):
+            if not isinstance(rid, str) or not ID_RE.match(rid):
+                ctx.fout("orion.json", f"id '{rid}' mag alleen kleine letters, cijfers en "
+                                       "streepjes bevatten")
+            if rid in gezien:
+                ctx.fout("orion.json", f"id '{rid}' komt twee keer voor")
+            gezien.add(rid)
 
 
 class OrionWees(Regel):
@@ -52,7 +120,7 @@ class OrionWees(Regel):
     """
 
     id = "orion-orphan"
-    legacy = ("DeN:2", "ICEES:2")
+    legacy = ("DeN:2", "ICEES:2", "MC:2", "IR:2")
 
     def van_toepassing(self, ctx):
         return heeft_orion(ctx)
@@ -66,7 +134,10 @@ class OrionWees(Regel):
                    if soort == "page" and (ctx.root / d).is_file()
                    and ctx.exacte_hoofdletters(ctx.root / d)}
         wortels = [(ctx.root / w).resolve() for w in ctx.config["check"]["orphan_roots"]]
+        paginas_gecontroleerd = set(ctx.paginas)
         for pagina in ctx.sitepaginas:
+            if pagina not in paginas_gecontroleerd:
+                continue
             if not any(w == pagina or w in pagina.parents for w in wortels):
                 continue
             if os.path.normcase(str(pagina)) not in paginas:
@@ -100,7 +171,7 @@ class TopicGrens(Regel):
     """
 
     id = "topic-frame"
-    legacy = ("DeN:10", "ICEES:10")
+    legacy = ("DeN:10", "ICEES:10", "MC:9", "IR:9")
 
     def van_toepassing(self, ctx):
         return heeft_orion(ctx)
@@ -116,9 +187,10 @@ class TopicGrens(Regel):
                 if not m:
                     continue
                 href = m.group(1)
-                if href.startswith(("http", "#", "mailto:", "/")):
+                if href.startswith(("http", "#", "mailto:", "/", "tel:", "data:", "javascript:")):
                     continue
-                doel = Path(os.path.normpath(pad.parent / unquote(href.split("#")[0])))
+                doel = Path(os.path.normpath(
+                    pad.parent / unquote(href.split("#")[0].split("?")[0])))
                 if doel.suffix.lower() != ".html" or doel == pad or not doel.exists():
                     continue
                 if BLANK_RE.search(anker):

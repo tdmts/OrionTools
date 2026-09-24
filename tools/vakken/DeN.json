@@ -1,8 +1,61 @@
 {
-  "course": {"code": "DeN", "title": "Datacommunicatie en netwerken"},
+  "course": {
+    "code": "DeN",
+    "title": "Datacommunicatie en netwerken"
+  },
   "syllabus": {
     "pdf": "Datacommunicatie-en-netwerken-syllabus.pdf",
-    "logo": "img/syllabus-cover-logo.png"
+    "logo": "img/syllabus-cover-logo.png",
+    "docx": "OneDrive - Hogeschool Gent/EDU/2025-2026/Datacommunicatie en netwerken/Theorie/Datacommunicatie en netwerken.docx",
+    "afkortingen": {
+      "tcp/ip": "TcpIp",
+      "osi": "Osi",
+      "ip": "Ip",
+      "lan": "Lan",
+      "wan": "Wan",
+      "mac": "Mac",
+      "vlan": "Vlan",
+      "qos": "Qos",
+      "arp": "Arp",
+      "dhcp": "Dhcp",
+      "dns": "Dns",
+      "nat": "Nat",
+      "http": "Http",
+      "smtp": "Smtp",
+      "nic": "Nic"
+    },
+    "krimp": {
+      "dpi": 150,
+      "_uitleg": "Tekst die een oefening moet kunnen lezen: de SFP-datasheets van 2.6 Oefening: switch bekabelen en de drie bladzijden van het firewallartikel in 5.5.",
+      "onaangeroerd": [
+        "syllabus-02-fysieke-laag-15.png",
+        "syllabus-02-fysieke-laag-16.png",
+        "syllabus-02-fysieke-laag-17.png",
+        "syllabus-05-transport-laag-04.png",
+        "syllabus-05-transport-laag-05.png",
+        "syllabus-05-transport-laag-06.png"
+      ]
+    },
+    "cover": {
+      "opleiding": "Bachelor in de elektromechanica - automatisering",
+      "auteur": "Tom Demets (tom.demets@hogent.be)",
+      "departement": [
+        "Departement",
+        "Biowetenschappen en",
+        "Industriële Technologie"
+      ],
+      "voet": [
+        "Bachelor in de elektromechanica",
+        "",
+        "Automatisering"
+      ]
+    }
   },
-  "handout": {"prefix": "DeN-handout-"}
+  "handout": {
+    "prefix": "DeN-handout-"
+  },
+  "import_brightspace": {
+    "max_mb": 25,
+    "page_depth": 3
+  }
 }

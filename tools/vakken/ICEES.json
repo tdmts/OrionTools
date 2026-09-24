@@ -1,10 +1,87 @@
 {
-  "course": {"code": "ICEES", "title": "Industriële computers en embedded systems"},
+  "course": {
+    "code": "ICEES",
+    "title": "Industriële computers en embedded systems"
+  },
   "syllabus": {
     "pdf": "Industriele-computers-en-embedded-systems-syllabus.pdf",
     "logo": "img/syllabus-cover-logo.png",
+    "docx": "OneDrive - Hogeschool Gent/EDU/2025-2026/Industriële computers en embedded systems/Theorie/Syllabus/Industriële computers en embedded systems_.docx",
+    "afkortingen": {
+      "bios": "Bios",
+      "uefi": "Uefi",
+      "gpt": "Gpt",
+      "mbr": "Mbr",
+      "vm": "Vm",
+      "ssd": "Ssd",
+      "hdd": "Hdd",
+      "mqtt": "Mqtt",
+      "ic": "Ic",
+      "ics": "Ics",
+      "vlsi": "Vlsi",
+      "cpu": "Cpu",
+      "gpu": "Gpu",
+      "apu": "Apu",
+      "psu": "Psu",
+      "pch": "Pch",
+      "ram": "Ram",
+      "dram": "Dram",
+      "sdram": "Sdram",
+      "sdr": "Sdr",
+      "ddr": "Ddr",
+      "ecc": "Ecc",
+      "arm": "Arm",
+      "fat": "Fat",
+      "ntfs": "Ntfs",
+      "ext": "Ext",
+      "pata": "Pata",
+      "sata": "Sata",
+      "ahci": "Ahci",
+      "nvme": "Nvme",
+      "pci": "Pci",
+      "pcie": "Pcie",
+      "raid": "Raid",
+      "nas": "Nas",
+      "usb": "Usb",
+      "plc": "Plc"
+    },
     "vet_uit_de_word": false,
-    "krimp": {"dpi": 150, "onaangeroerd": []}
+    "krimp": {
+      "dpi": 150,
+      "_uitleg": "Tekst die een oefening moet kunnen lezen: de ASCII-tabel van 10.3 (oefening 5 van 10.6) en de zes datasheetbladzijden van 9.5.",
+      "onaangeroerd": [
+        "syllabus-10-informatievoorstelling-02.png",
+        "syllabus-09-moederbord-16.png",
+        "syllabus-09-moederbord-17.png",
+        "syllabus-09-moederbord-20.png",
+        "syllabus-09-moederbord-21.png",
+        "syllabus-09-moederbord-25.png",
+        "syllabus-09-moederbord-26.png"
+      ]
+    },
+    "cover": {
+      "opleiding": "Bachelor in de elektromechanica - automatisering",
+      "auteur": "Tom Demets (tom.demets@hogent.be)",
+      "departement": [
+        "Departement",
+        "Biowetenschappen en",
+        "Industriële Technologie"
+      ],
+      "voet": [
+        "Bachelor in de elektromechanica",
+        "",
+        "Automatisering"
+      ]
+    }
   },
-  "handout": {"prefix": "ICEES-handout-"}
+  "handout": {
+    "prefix": "ICEES-handout-"
+  },
+  "oplossing": {
+    "gelijke_kolommen": true
+  },
+  "import_brightspace": {
+    "max_mb": 25,
+    "page_depth": 3
+  }
 }

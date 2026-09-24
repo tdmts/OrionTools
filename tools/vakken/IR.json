@@ -2,7 +2,15 @@
   "course": {"code": "IR", "title": "Industrial Robots"},
   "check": {
     "orphan_roots": ["."],
-    "remote_document_exts_extra": ["rspag", "rslib", "sat"]
+    "remote_document_exts_extra": ["rspag", "rslib", "sat"],
+    "audit": {
+      "stock_lead_extra": ["In deze oefening leer je"],
+      "diminutives_extra": ["vinkjes?", "venstertje", "doosjes?"]
+    }
   },
-  "export_pdf": {"group": "module"}
+  "import_brightspace": {
+    "doc_exts": [".pdf", ".zip", ".rspag", ".rslib", ".sat", ".exe"],
+    "start_exts": [".zip", ".rspag", ".rslib", ".sat", ".exe"]
+  },
+  "export_pdf": {"group": "module", "naam": "{code}-{id}", "doc_exts_extra": [".rspag", ".rslib", ".sat"]}
 }
