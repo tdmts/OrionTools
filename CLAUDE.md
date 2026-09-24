@@ -37,7 +37,6 @@ oriontools/
     importers/           brightspace, syllabus, slides
 tools/vakken/<code>.json the config of a course that has no oriontools.json yet (--config)
 tools/parity.py          old check against new, per course
-tests/fixtures/          one good and one bad tree per rule
 ```
 
 ## Conventions
