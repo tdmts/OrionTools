@@ -35,7 +35,6 @@ oriontools/
     check/               the content check: runner, rules/, audit, fix
     export/              syllabus, handout, verslag, oplossing, pdf
     importers/           brightspace, syllabus, slides
-tools/vakken/<code>.json the config of a course that has no oriontools.json yet (--config)
 tools/parity.py          old check against new, per course
 ```
 
@@ -64,9 +63,3 @@ exists; `check --explain <id>` prints it. The contract is in the header of
 
 A new rule applies to every course by default. A course that does not want it opts out in its own
 `oriontools.json` with `check.disable: {"<id>": "<reason>"}`, never by a branch here.
-
-## tools/vakken/
-
-`tools/vakken/<code>.json` exists only for a course that has not migrated yet (today: `MC.json`
-for Microcontrollers, used as `--repo ../Microcontrollers --config tools/vakken/MC.json`). Once a
-course has its own `oriontools.json`, its file here is deleted: two configs for one course drift.

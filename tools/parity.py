@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """De oude check tegen de nieuwe, op dezelfde boom.
 
-    python tools/parity.py ../Microcontrollers --config tools/vakken/MC.json --bash [--audit]
-    python tools/parity.py ../Microcontrollers --config tools/vakken/MC.json --bash [--audit] --mutaties WERKMAP
-    python tools/parity.py ../Microcontrollers --config tools/vakken/MC.json --bash --fix WERKMAP
+    python tools/parity.py OUD --config ../Microcontrollers/oriontools.json --bash [--audit]
+    python tools/parity.py OUD --config ../Microcontrollers/oriontools.json --bash [--audit] --mutaties WERKMAP
+    python tools/parity.py OUD --config ../Microcontrollers/oriontools.json --bash --fix WERKMAP
 
-Zonder --config leest het de oriontools.json van het vak, zoals orion.py. Een
-vak dat al overgestapt is, heeft zijn oude check niet meer; dit loopt dus
-alleen zolang er een vak is dat nog niet over is.
+Elk vak is intussen overgestapt en heeft zijn oude check niet meer. OUD is dus
+een checkout van een vak van voor zijn overstap, bijvoorbeeld
+`git -C ../Microcontrollers worktree add ../mc-oud <overstapcommit>^`, en
+--config wijst naar de oriontools.json van het vak zelf, omdat die checkout er
+nog geen heeft. Zonder --config leest het de oriontools.json in OUD, zoals
+orion.py.
 
 Met --bash is de oude check scripts/check-content.sh (Microcontrollers, IR);
 zie de sectie over de bash-check verderop.
