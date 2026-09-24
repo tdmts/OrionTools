@@ -4,7 +4,8 @@
     python ../OrionTools/orion.py check --hook     stil als alles klopt; anders fouten op
                                                    stderr en exit 2, wat de Stop-hook laat
                                                    blokkeren (exit 1 blokkeert niet)
-    python ../OrionTools/orion.py check --ci       verouderingsregels op committijd
+    python ../OrionTools/orion.py check --ci       zonder de verouderingsregels, die een
+                                                   werkkopie nodig hebben
     python ../OrionTools/orion.py check --audit    ook de huisstijl; adviserend, zonder
                                                    invloed op de exitcode
     python ../OrionTools/orion.py check --fix      eerst de mechanische fouten herstellen
@@ -51,6 +52,8 @@ def toestand(ctx, regel, uit):
     """('actief'|'uit'|'n.v.t.', reden) voor een regel in dit vak."""
     if regel.id in uit:
         return "uit", uit[regel.id]
+    if regel.alleen_lokaal and ctx.ci:
+        return "n.v.t.", "alleen lokaal, niet met --ci"
     ok = regel().van_toepassing(ctx)
     if ok is True:
         return "actief", ""
@@ -100,7 +103,7 @@ def main(argv):
 
     if args.rules:
         uit = _uitgezet(ctx)
-        breed = max(map(len, REGISTER))
+        breed = max(map(len, REGISTER), default=0)
         for rid, cls in sorted(REGISTER.items()):
             stand, reden = toestand(ctx, cls, uit)
             extra = f"  ({reden})" if reden else ""

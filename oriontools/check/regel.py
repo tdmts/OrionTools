@@ -12,6 +12,8 @@ Een regel is een subklasse van Regel in een module onder rules/. Ze draagt:
 - van_toepassing(ctx): True, of een korte reden waarom niet ("geen
   orion.json"). Een regel geldt voor elk vak waar het ding bestaat dat ze
   nakijkt; een vak dat haar toch niet wil, zet haar uit met een reden.
+- alleen_lokaal: True voor een regel die mtimes vergelijkt; die slaat --ci
+  over (zie Context.tijd).
 - controleer(ctx): meldt via ctx.fout en ctx.waarschuw.
 
 De docstring van de klasse is de uitleg die `check --explain <id>` toont, en
@@ -26,6 +28,7 @@ class Regel:
     id = ""
     legacy = ()
     modus = "standaard"
+    alleen_lokaal = False
 
     def __init_subclass__(cls, **kw):
         super().__init_subclass__(**kw)

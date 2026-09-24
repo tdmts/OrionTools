@@ -30,7 +30,7 @@ class Context:
         self.vak = vak
         self.root = vak.root
         self.config = vak.config
-        self.ci = ci                 # verouderingsregels op committijd, niet op mtime
+        self.ci = ci                 # in CI: geen verouderingsregels
         self.bevindingen = []
         self._teksten = {}
         self._huidige_regel = None
@@ -126,31 +126,15 @@ class Context:
 
     # --------------------------------------------------------------- tijd
 
-    @cached_property
-    def _committijden(self):
-        """Pad -> tijd van de laatste commit die het raakte, in een git log."""
-        tijden = {}
-        try:
-            uit = subprocess.run(["git", "log", "--format=@%ct", "--name-only", "-z"],
-                                 cwd=self.root, capture_output=True, text=True,
-                                 encoding="utf-8", check=True).stdout
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return tijden
-        huidig = 0
-        for stuk in uit.replace("\n", "\0").split("\0"):
-            if stuk.startswith("@"):
-                huidig = int(stuk[1:])
-            elif stuk and stuk not in tijden:
-                tijden[stuk] = huidig
-        return tijden
-
     def tijd(self, pad):
-        """Wanneer pad laatst veranderde.
+        """Wanneer pad laatst veranderde: de mtime.
 
-        Lokaal is dat de mtime. In CI niet: een checkout zet elke mtime op het
-        moment van uitchecken, en dan is geen enkel afgeleid bestand ouder dan
-        zijn bron. Daar telt de laatste commit die het bestand raakte.
+        Een verouderingsregel vergelijkt een afgeleid bestand met zijn bron, en
+        dat kan alleen in een werkkopie. Een checkout zet elke mtime op het
+        moment van uitchecken, en de committijd helpt ook niet: een export die
+        byte voor byte gelijk uitkomt, laat git niets zien, dus de bron lijkt
+        nieuwer dan een PDF die klopt. Daarom draaien die regels niet met --ci
+        (Regel.alleen_lokaal); de Stop-hook vangt ze op de machine waar de
+        export gebeurt.
         """
-        if self.ci:
-            return self._committijden.get(self._rel(pad), 0)
         return pad.stat().st_mtime
