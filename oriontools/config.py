@@ -94,11 +94,6 @@ STANDAARD = {
     "handout": {
         "prefix": "",
     },
-    "oplossing": {
-        # Elke cel van een ingevulde tabel width: 50% (gelijke kolommen), of
-        # de kolommen naar hun inhoud. Zie de kop van export/oplossing.py.
-        "gelijke_kolommen": False,
-    },
     "import_brightspace": {
         # Een document boven deze grens wordt overgeslagen. GitHub waarschuwt
         # vanaf 50 MB en weigert 100 MB.

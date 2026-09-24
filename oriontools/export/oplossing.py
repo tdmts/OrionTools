@@ -163,11 +163,10 @@ het andere niet, is een verschil dat de student zelf moet uitzoeken. De
 ICEES-kopie van dit script liet de figuren, de accordeons en de info-boxen nog
 weg; die zijn er met de samenvoeging in OrionTools bij gekomen.
 
-Hoe breed de kolommen van een ingevulde tabel zijn, is de enige opmaak die per
-vak verschilt: oplossing.gelijke_kolommen in oriontools.json. Aan (ICEES) geeft
-elke cel width: 50%, wat de browser bij meer dan twee kolommen herleidt tot
-gelijke kolommen; uit (DeN) laat de browser de kolommen naar hun inhoud
-verdelen, wat de smalle kruisjeskolommen van de pintabel van RS485 nodig hebben.
+De kolommen van een ingevulde tabel krijgen geen breedte: de browser verdeelt
+ze naar hun inhoud, wat de smalle kruisjeskolommen van de pintabel van RS485
+nodig hebben. Gelijke kolommen (width: 50% per cel) gaven daar een brede kolom
+voor een kruisje.
 
 Een figuur wordt ingesloten met een absolute file-URL en op de maat die ook
 export-verslag rekent: de eigen maat op 96 dpi, afgetopt op de
@@ -1020,18 +1019,13 @@ figcaption { font-size: 9pt; font-style: italic; color: #5A5A5A; margin-top: 2pt
 p.ontbreekt { font-style: italic; color: #5A5A5A; }
 """
 
-# oplossing.gelijke_kolommen: zie WAT ER UIT DE OPDRACHT MEEKOMT bovenaan.
-GELIJKE_KOLOMMEN = """
-table.invul th, table.invul td { width: 50%; }
-"""
-
 
 HOOFDING = ("Dit is de modeloplossing bij je opdracht. Leg ze naast je eigen verslag "
             "en kijk na waar je antwoord verschilt.")
 
 
 def bouw_html(titel, lead, body, antwoorden, basis, figuurmap, antwoordmap, waar,
-              wortel, gelijke_kolommen=False):
+              wortel):
     staat = {"vraag": 0, "kader": 0, "figuur": 0, "sectie": None, "gezien": set(),
              "figuurmap": figuurmap, "antwoordmap": antwoordmap, "wortel": wortel}
     uit = []
@@ -1044,7 +1038,7 @@ def bouw_html(titel, lead, body, antwoorden, basis, figuurmap, antwoordmap, waar
         sys.exit(f"{waar}: deze sleutels horen bij geen enkele vraag, geen kader "
                  f"en geen kop van de opdracht: {namen}. Is de opdracht gewijzigd?")
 
-    stijl = STIJL + (GELIJKE_KOLOMMEN if gelijke_kolommen else "")
+    stijl = STIJL
     return f"""<!DOCTYPE html>
 <html lang="nl"><head><meta charset="utf-8"><title>{esc(titel)}</title>
 <style>{stijl}</style></head><body>
@@ -1158,7 +1152,6 @@ def main(argv):
     vak = repo.vind(args)
     wortel = vak.root
     oplossingen = vak.pad("oplossingen")
-    gelijke_kolommen = vak.config["oplossing"]["gelijke_kolommen"]
 
     module = (wortel / args.module).resolve()
     opdracht = module / "Opdracht.html"
@@ -1188,7 +1181,7 @@ def main(argv):
         # de HTML die je wil nakijken naar afbeeldingen die niet meer bestaan.
         document = bouw_html(titel, lead, body, antwoorden, module,
                              uitmap, antwoordpad.parent, antwoordpad.name,
-                             wortel, gelijke_kolommen)
+                             wortel)
         doel = uit.with_suffix(".html")
         doel.write_text(document, encoding="utf-8")
         print(f"Geschreven: {doel}")
@@ -1197,7 +1190,7 @@ def main(argv):
     with tempfile.TemporaryDirectory() as tmp:
         document = bouw_html(titel, lead, body, antwoorden, module,
                              Path(tmp), antwoordpad.parent, antwoordpad.name,
-                             wortel, gelijke_kolommen)
+                             wortel)
         html_pad = Path(tmp) / "oplossing.html"
         html_pad.write_text(document, encoding="utf-8")
         ruw = Path(tmp) / "ruw.pdf"

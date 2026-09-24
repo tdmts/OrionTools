@@ -77,9 +77,6 @@
   "handout": {
     "prefix": "ICEES-handout-"
   },
-  "oplossing": {
-    "gelijke_kolommen": true
-  },
   "import_brightspace": {
     "max_mb": 25,
     "page_depth": 3
