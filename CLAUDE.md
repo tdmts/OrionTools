@@ -35,7 +35,7 @@ oriontools/
     check/               the content check: runner, rules/, audit, fix
     export/              syllabus, handout, verslag, oplossing, pdf
     importers/           brightspace, syllabus, slides
-tools/vakken/<code>.json the config of each course while it is not migrated yet (--config)
+tools/vakken/<code>.json the config of a course that has no oriontools.json yet (--config)
 tools/parity.py          old check against new, per course
 tests/fixtures/          one good and one bad tree per rule
 ```
@@ -53,3 +53,21 @@ tests/fixtures/          one good and one bad tree per rule
   are the record of why a rule exists.
 - A fix belongs in all courses. If a behaviour genuinely differs per course, it gets a config key
   with a default, never a branch on `vak.code`.
+
+## Adding a rule
+
+Subclass `Regel` in a module under `oriontools/check/rules/`. Give it an `id` (a stable kebab
+slug, never a number), `legacy` (the old per-course numbers, or `()` for a new rule), and a
+`van_toepassing(ctx)` that decides by presence: the rule applies wherever the thing it checks
+exists, and returns a short reason when it does not. The class docstring is the reason the rule
+exists; `check --explain <id>` prints it. The contract is in the header of
+[`oriontools/check/regel.py`](oriontools/check/regel.py).
+
+A new rule applies to every course by default. A course that does not want it opts out in its own
+`oriontools.json` with `check.disable: {"<id>": "<reason>"}`, never by a branch here.
+
+## tools/vakken/
+
+`tools/vakken/<code>.json` exists only for a course that has not migrated yet (today: `MC.json`
+for Microcontrollers, used as `--repo ../Microcontrollers --config tools/vakken/MC.json`). Once a
+course has its own `oriontools.json`, its file here is deleted: two configs for one course drift.

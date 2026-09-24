@@ -5,6 +5,9 @@ ziet er alleen niet uit als haar buren. Adviserend met opzet, dus nooit rood in
 CI en nooit een collega geblokkeerd over een stijlkeuze. Je draait het als je
 wil opruimen, niet bij elke push.
 
+Een audit kijkt naar ctx.auditpaginas: de sitepagina's die git trackt, dus
+niet pasteInOrion.html, geen deck en geen ongetrackt klad.
+
 Een pagina kan vastleggen dat een afwijking bewust is:
 
     <!-- audit-skip: oplossing -->
@@ -103,7 +106,7 @@ class AuditRegel(Regel):
 def _woordregel(ctx, regel, lijst, extra_sleutel, boodschap):
     woorden = lijst + _audit(ctx)[extra_sleutel]
     patroon = re.compile(r"\b(" + "|".join(woorden) + r")\b")
-    for pad in ctx.paginas:
+    for pad in ctx.auditpaginas:
         if regel.overgeslagen(ctx, pad):
             continue
         for woord in sorted(set(m.group(0) for m in patroon.finditer(ctx.tekst(pad)))):
@@ -124,7 +127,7 @@ class AuditSkip(AuditRegel):
     def controleer(self, ctx):
         geldig = {cls.id.removeprefix("audit-") for cls in REGISTER.values()
                   if cls.modus == "audit" and cls.id != self.id}
-        for pad in ctx.paginas:
+        for pad in ctx.auditpaginas:
             for naam in sorted(skips(ctx, pad)):
                 if naam in geldig:
                     ctx.meld(pad, f"audit-skip: {naam}", "afwijking")
@@ -150,7 +153,7 @@ class AuditCodeKlasse(AuditRegel):
     def controleer(self, ctx):
         talen = _audit(ctx)["code_languages"]
         zonder_badge = set(_audit(ctx)["code_no_badge"])
-        for pad in ctx.paginas:
+        for pad in ctx.auditpaginas:
             if self.overgeslagen(ctx, pad):
                 continue
             for m in re.finditer(r'class="(code-wrapper[^"]*)"', ctx.tekst(pad)):
@@ -186,7 +189,7 @@ class AuditLeadOpener(AuditRegel):
     def controleer(self, ctx):
         formules = STOCK_LEAD + _audit(ctx)["stock_lead_extra"]
         patroon = re.compile(r'class="lead">.*(' + "|".join(formules) + ")")
-        for pad in ctx.paginas:
+        for pad in ctx.auditpaginas:
             if not self.overgeslagen(ctx, pad) and patroon.search(ctx.tekst(pad)):
                 ctx.waarschuw(pad, "de lead opent op een vaste formule, varieer "
                                    "(SCHRIJFSTIJL.md 9)")
@@ -252,7 +255,7 @@ class AuditLedSpelling(AuditRegel):
     id = "audit-led-spelling"
 
     def controleer(self, ctx):
-        doelen = list(ctx.paginas)
+        doelen = list(ctx.auditpaginas)
         if (ctx.root / "orion.json").is_file():
             doelen.append(ctx.root / "orion.json")
         for pad in doelen:
@@ -291,7 +294,7 @@ class AuditIdentifierTaal(AuditRegel):
     def controleer(self, ctx):
         patroon = re.compile(r"(^|[^A-Za-z0-9_.])(" + "|".join(_audit(ctx)["identifier_words"])
                              + r")\b")
-        for pad in ctx.paginas:
+        for pad in ctx.auditpaginas:
             for nr, regel in enumerate(ctx.tekst(pad).split("\n"), 1):
                 if not patroon.search(regel) or any(t in regel for t in PROZA_ID):
                     continue
@@ -313,7 +316,7 @@ class AuditUVorm(AuditRegel):
     id = "audit-u-vorm"
 
     def controleer(self, ctx):
-        for pad in ctx.paginas:
+        for pad in ctx.auditpaginas:
             if self.overgeslagen(ctx, pad):
                 continue
             for nr, regel in enumerate(ctx.tekst(pad).split("\n"), 1):
@@ -330,15 +333,16 @@ def _past(ctx, pad, sleutel):
 class AuditLead(AuditRegel):
     """Een pagina heeft een <p class="lead"> onder de <h1>.
 
-    Op de pagina's uit check.audit.page_patterns (Microcontrollers: de
-    oefeningen en de naslag van een labo; standaard elke pagina).
+    Op de pagina's uit check.audit.lead_patterns (Microcontrollers: de
+    oefeningen en de naslag van een labo; standaard elke pagina). Een vak dat
+    de lead alleen op zijn ingangen zet, beperkt het tot die ingangen.
     """
 
     id = "audit-lead"
 
     def controleer(self, ctx):
-        for pad in ctx.paginas:
-            if (_past(ctx, pad, "page_patterns") and 'class="lead"' not in ctx.tekst(pad)
+        for pad in ctx.auditpaginas:
+            if (_past(ctx, pad, "lead_patterns") and 'class="lead"' not in ctx.tekst(pad)
                     and not self.overgeslagen(ctx, pad)):
                 ctx.waarschuw(pad, 'geen <p class="lead"> onder de <h1>')
 
@@ -349,14 +353,15 @@ class AuditFiguur(AuditRegel):
     Een heuristiek: meer regels met <img> dan met <figure> betekent minstens
     een kale afbeelding. Een afbeelding in een tabelcel telt niet mee, want een
     vergelijkingstabel zet ze bewust in een <td>, en die in een figure wikkelen
-    zou fout zijn. Zelfde pagina's als audit-lead.
+    zou fout zijn. Op de pagina's uit check.audit.figure_patterns (standaard
+    elke pagina).
     """
 
     id = "audit-figure"
 
     def controleer(self, ctx):
-        for pad in ctx.paginas:
-            if not _past(ctx, pad, "page_patterns") or self.overgeslagen(ctx, pad):
+        for pad in ctx.auditpaginas:
+            if not _past(ctx, pad, "figure_patterns") or self.overgeslagen(ctx, pad):
                 continue
             regels = ctx.tekst(pad).split("\n")
             imgs = sum("<img" in r for r in regels)
@@ -390,7 +395,7 @@ class AuditIndienen(AuditRegel):
         return heeft_oefeningen(ctx)
 
     def controleer(self, ctx):
-        for pad in ctx.paginas:
+        for pad in ctx.auditpaginas:
             if not _past(ctx, pad, "exercise_patterns") or self.overgeslagen(ctx, pad):
                 continue
             tekst = ctx.tekst(pad)
@@ -415,7 +420,7 @@ class AuditOplossing(AuditRegel):
         return heeft_oefeningen(ctx)
 
     def controleer(self, ctx):
-        for pad in ctx.paginas:
+        for pad in ctx.auditpaginas:
             if not _past(ctx, pad, "exercise_patterns") or self.overgeslagen(ctx, pad):
                 continue
             if not re.search(r'<h2[^>]*id="oplossing"', ctx.tekst(pad)):

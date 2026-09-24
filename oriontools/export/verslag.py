@@ -10,8 +10,8 @@ Labo-RS485-verslag.docx.
 Het sjabloon is geen tweede versie van de opdracht die je apart onderhoudt: het
 wordt uit de pagina gegenereerd, zodat het niet kan verouderen. Draai dit
 commando opnieuw in dezelfde commit als een wijziging aan Opdracht.html, en
-commit de docx mee. OrionSync en GitHub Pages brengen allebei alleen bestanden
-naar de student die in git zitten.
+commit de docx mee. OrionSync spiegelt alleen bestanden die in git zitten naar
+Brightspace.
 
 Waarom een docx en geen invulveld op de pagina: de student moet screenshots
 kunnen plakken, moet van pc kunnen wisselen, en er moet een backup van zijn.
@@ -76,8 +76,8 @@ document komt niet uit die pixels maar uit de maat die de svg zelf opgeeft, op
 Chrome is dus alleen nodig als er echt een svg in de opdracht staat. Een labo
 zonder svg draait met niets dan python-docx, en dat blijft zo.
 
-Regel 7 van de check (orion.py check) bewaakt dat het blok afgesloten is en
-dat er geen vragen buiten terechtkomen.
+De regels unclosed-comment en verslag-markup van de check (orion.py check)
+bewaken dat het blok afgesloten is en dat er geen vragen buiten terechtkomen.
 
 Nodig: python-docx (pip install python-docx), en een headless Chrome of Edge
 zodra de opdracht een svg bevat. Waar die staat weet oriontools/chrome.py.
@@ -578,7 +578,7 @@ def voorblad(doc, titel, intro):
 
     De introductie hoort hier omdat dit document voor de student de opdracht
     is. Wie het opent zonder de site gezien te hebben, moet meteen weten waar
-    het labo over gaat. Regel 8 van de check eist daarom dat
+    het labo over gaat. De regel opdracht-lead van de check eist daarom dat
     Opdracht.html een <p class="lead"> heeft.
     """
     doc.add_heading(titel, level=0)

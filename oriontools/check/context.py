@@ -73,6 +73,16 @@ class Context:
         return set(filter(None, uit.split("\0")))
 
     def overgeslagen(self, pad):
+        """Valt pad buiten de check: .git, node_modules of een staging-map?
+
+        _incoming is ruwe Brightspace-inhoud, en die breekt met opzet precies
+        wat de regels verbieden: geen OrionCSS, YouTube zonder referrerpolicy,
+        em-dashes. Telde de check hem mee, dan stond ze rood zolang een import
+        loopt en riep de Stop-hook bij elke beurt, en zo leer je haar niet meer
+        lezen. _oplossingen houdt modeloplossingen die .gitignore buiten git
+        houdt: OrionSync spiegelt ze nooit, dus er is niets om na te kijken.
+        _export is eigen uitvoer. De lijst is config "staging".
+        """
         delen = pad.relative_to(self.root).parts
         return ".git" in delen or "node_modules" in delen or bool(self.staging.intersection(delen))
 
@@ -109,6 +119,21 @@ class Context:
                 continue
             uit.append(p)
         return uit
+
+    @cached_property
+    def auditpaginas(self):
+        """De pagina's die --audit nakijkt: gepubliceerde sitepagina's.
+
+        Dezelfde set als de siteregels (sitepaginas), zonder check.skip_pages,
+        en alleen wat git trackt. Een audit gaat over wat de student leest:
+        pasteInOrion.html en een deck zijn geen sitepagina, en een ongetrackt
+        klad (een Sessie1Beta.html naast het echte deck) spiegelt OrionSync
+        niet, dus een bevinding daarop is ruis. Zonder git telt alles.
+        """
+        site = set(self.sitepaginas)
+        getrackt = self.getrackt
+        return [p for p in self.paginas if p in site and
+                (getrackt is None or p.relative_to(self.root).as_posix() in getrackt)]
 
     def tekst(self, pad):
         if pad not in self._teksten:

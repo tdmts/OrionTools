@@ -37,8 +37,8 @@ bijwerkt, staat er iets in dat niet meer waar is. Dat is ook echt gebeurd: na de
 correctie aan heeft_kopregel beweerde IMPORT.md over drie tabellen een kopregel
 die er niet meer stond, met een reden die de code niet meer kent.
 
-Een gok krijgt daarom een data-geraden op het element zelf, en regel 15 van
-de check (orion.py check) laat de check daarop vallen. Zo staat de twijfel in de
+Een gok krijgt daarom een data-geraden op het element zelf, en de regel
+importer-guess van de check (orion.py check) laat de check daarop vallen. Zo staat de twijfel in de
 weg in plaats van in een logboek, en veroudert ze niet, want ze staat bij de
 markup die ze beschrijft. Je lost ze op door het attribuut te schrappen, en dat
 schrappen is de bevestiging.
@@ -105,6 +105,18 @@ notities = []
 
 
 def noteer(waar, tekst):
+    """Leg vast wat de importer moest raden, voor IMPORT.md.
+
+    EEN REDEN DIE DE IMPORTER AFDRUKT, MOET EEN REDEN ZIJN DIE HIJ GELEZEN HEEFT.
+    Achter elke "want ..." in een notitie hoort een predicaat dat precies die
+    reden test, en geen stand-in ervoor. data-geraden en importer-guess vangen
+    alleen de gok die weet dat hij gokt; de importer die zelfverzekerd fout zit,
+    vangt geen regel. Zo liep het met de kopregel: de log zei "want tblLook
+    firstRow", terwijl heeft_kopregel alleen de vlag las en niet of de
+    tabelstijl de eerste rij ook opmaakt. De reden klopte vaak genoeg om vier
+    hoofdstukken lang niet op te vallen, en een en twintig tabellen kregen een
+    kopregel die de Word niet tekent (zie heeft_kopregel).
+    """
     notities.append((waar, tekst))
 
 
@@ -663,8 +675,8 @@ def tabel_html(tabel, ctx):
     # te staan en niet alleen in IMPORT.md. Een logregel wordt niet gelezen en
     # veroudert bovendien stil: verander je hier een regel of pas je de HTML met
     # de hand aan, dan blijft er in IMPORT.md staan wat er ooit gebeurde. Het
-    # attribuut staat bij de markup die het beschrijft, en regel 15 van
-    # de check (orion.py check) laat de check erop vallen tot een mens beslist
+    # attribuut staat bij de markup die het beschrijft, en de regel
+    # importer-guess van de check (orion.py check) laat de check erop vallen tot een mens beslist
     # heeft. Je lost het op door het attribuut te schrappen (gok bevestigd) of
     # door de markup te veranderen.
     #

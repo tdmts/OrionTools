@@ -21,7 +21,8 @@ class VerslagVerouderd(Regel):
     overgeslagen: een deel dat een .pka oplevert en geen document, heeft aan een
     sjabloon zonder iets om in te vullen minder dan aan geen sjabloon.
 
-    Lokaal telt de mtime, in CI (--ci) de laatste commit die het bestand raakte.
+    De regel vergelijkt mtimes en draait dus alleen lokaal: met --ci slaat ze
+    over (zie Context.tijd).
     """
 
     id = "verslag-stale"

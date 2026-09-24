@@ -38,6 +38,7 @@ STANDAARD = {
         "startbestanden": "startbestanden",
     },
     # Mappen die de check overslaat: ruwe import, eigen uitvoer, oplossingen.
+    # Waarom: zie Context.overgeslagen in check/context.py.
     "staging": ["_incoming", "_export", "_oplossingen"],
     # Pagina's in de repo die geen pagina van de site zijn.
     "exempt_pages": ["pasteInOrion.html", "template.html"],
@@ -65,8 +66,12 @@ STANDAARD = {
             "code_languages": [],
             # Talen die geen show-language dragen (de badge zou "plaintext" zeggen).
             "code_no_badge": ["plaintext"],
-            # fnmatch op het relatieve pad: waar audit-lead en audit-figure kijken.
-            "page_patterns": ["*"],
+            # fnmatch op het relatieve pad. Waar audit-lead kijkt: alleen waar het
+            # vak een lead zet, want een theoriepagina zonder lead is geen fout.
+            "lead_patterns": ["*"],
+            # Waar audit-figure kijkt. Een kale afbeelding is overal een
+            # afwijking, dus een vak laat dit meestal op elke pagina staan.
+            "figure_patterns": ["*"],
             # Waar audit-indienen en audit-oplossing kijken (leeg: n.v.t.).
             "exercise_patterns": [],
         },

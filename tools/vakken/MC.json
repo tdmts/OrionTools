@@ -14,7 +14,8 @@
                            "risingEdge", "brightness", "isEnabled", "fullStep", "halfStep",
                            "blinkLed", "voltage"],
       "code_languages": ["cpp"],
-      "page_patterns": ["Labo*/Exercises/*", "Labo*/Reference/*"],
+      "lead_patterns": ["Labo*/Exercises/*", "Labo*/Reference/*"],
+      "figure_patterns": ["Labo*/Exercises/*", "Labo*/Reference/*"],
       "exercise_patterns": ["Labo*/Exercises/*"]
     }
   },

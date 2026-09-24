@@ -4,10 +4,10 @@
     python ../OrionTools/orion.py export-syllabus --html-only   # alleen de bundel, geen Chrome
 
 De uitvoer is <downloads>/<syllabus.pdf uit oriontools.json>, en die is
-GECOMMIT: GitHub Pages en OrionSync brengen allebei alleen wat in git zit naar
-de student. Ze is dus afgeleid materiaal dat toch in de repo staat, net als de
-verslagsjablonen, en regel 13 van de check faalt als ze ouder is dan de
-pagina's waar ze uit komt.
+GECOMMIT: OrionSync spiegelt alleen wat in git zit naar Brightspace. Ze is dus
+afgeleid materiaal dat toch in de repo staat, net als de verslagsjablonen, en
+de regel syllabus-stale van de check faalt als ze ouder is dan de pagina's
+waar ze uit komt.
 
 DE VOLGORDE KOMT UIT HET MANIFEST, niet uit de mappenlijst. Een categorie in
 het manifest (syllabus.manifest, standaard reference.js) is een hoofdstuk, een
@@ -372,7 +372,7 @@ def zonder_scripts(fragment):
 # afgeleid en volgen achteraan het hoofdstuk, zoals het verslagsjabloon uit
 # Opdracht.html volgt.
 #
-# Regel 14 van de check (orion.py check) bewaakt dat elke vraag een antwoord
+# De regel vragen-answered van de check (orion.py check) bewaakt dat elke vraag een antwoord
 # draagt, want hieronder is een vraag zonder antwoord alleen een regel "let op".
 
 # De inhoud is proza: een genest <div> zou deze niet-gulzige match afbreken.

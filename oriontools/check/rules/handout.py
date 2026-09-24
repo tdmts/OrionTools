@@ -65,7 +65,8 @@ class HandoutVerouderd(Regel):
     en dan is er niets om mee te vergelijken. De regel meldt alleen een PDF die
     er wel is en achterloopt, een keer per handout. De naam is
     handout.prefix plus de kebabvorm van het deck (Sessie1 wordt sessie-1).
-    Lokaal telt de mtime, in CI de laatste commit.
+    De regel vergelijkt mtimes en draait dus alleen lokaal: met --ci slaat ze
+    over (zie Context.tijd).
     """
 
     id = "handout-stale"

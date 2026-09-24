@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """De oude check tegen de nieuwe, op dezelfde boom.
 
-    python tools/parity.py ../DeN --config tools/vakken/DeN.json
-    python tools/parity.py ../DeN --config tools/vakken/DeN.json --mutaties WERKMAP
-    python tools/parity.py ../IR --config tools/vakken/IR.json --bash [--audit]
-    python tools/parity.py ../IR --config tools/vakken/IR.json --bash [--audit] --mutaties WERKMAP
-    python tools/parity.py ../IR --config tools/vakken/IR.json --bash --fix WERKMAP
+    python tools/parity.py ../Microcontrollers --config tools/vakken/MC.json --bash [--audit]
+    python tools/parity.py ../Microcontrollers --config tools/vakken/MC.json --bash [--audit] --mutaties WERKMAP
+    python tools/parity.py ../Microcontrollers --config tools/vakken/MC.json --bash --fix WERKMAP
+
+Zonder --config leest het de oriontools.json van het vak, zoals orion.py. Een
+vak dat al overgestapt is, heeft zijn oude check niet meer; dit loopt dus
+alleen zolang er een vak is dat nog niet over is.
 
 Met --bash is de oude check scripts/check-content.sh (Microcontrollers, IR);
 zie de sectie over de bash-check verderop.
@@ -632,14 +634,15 @@ def mutatieronde_bash(repo, config, werkmap):
 
 
 def muteer_audit(kloon, cfg):
-    """Een afwijking per auditregel, op een pagina die onder page_patterns valt."""
+    """Een afwijking per auditregel, op een pagina onder lead_patterns en figure_patterns."""
     audit = cfg.get("check", {}).get("audit", {})
-    patronen = audit.get("page_patterns", ["*"])
+    patronen = audit.get("lead_patterns", ["*"])
+    figuren = audit.get("figure_patterns", ["*"])
     oefening = audit.get("exercise_patterns", [])
     paginas = _orion_paginas(kloon)
     from fnmatch import fnmatch
     doel = next(kloon / p for p in paginas if any(fnmatch(p, x) for x in oefening or patronen)
-                and "</body>" in _lees(kloon / p))
+                and any(fnmatch(p, x) for x in figuren) and "</body>" in _lees(kloon / p))
     t = _lees(doel)
     t = re.sub(r'<p class="lead">', '<p class="lead">Hier lees je alles. ', t, count=1)
     t = t.replace("</body>", "\n".join([

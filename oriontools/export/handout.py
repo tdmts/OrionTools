@@ -6,7 +6,7 @@
 De decks staan in paths.decks van het vak (standaard Hoorcollege/). De uitvoer
 is <downloads>/<handout.prefix><naam>.pdf, bij DeN dus
 downloads/DeN-handout-sessie-1.pdf, en die is GECOMMIT, net als de syllabus:
-OrionSync en Pages brengen alleen wat in git zit naar de student, en van een
+OrionSync spiegelt alleen wat in git zit naar Brightspace, en van een
 deck is de PDF het enige dat hij ooit te zien krijgt. De titel onderaan elk
 blad begint met course.title.
 

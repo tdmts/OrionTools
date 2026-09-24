@@ -156,7 +156,8 @@ class SyllabusVerouderd(Regel):
     bijsnijdt, draait de export zelf.
 
     Welke PDF het is, zegt syllabus.pdf (een bestandsnaam onder
-    paths.downloads). Lokaal telt de mtime, in CI de laatste commit.
+    paths.downloads). De regel vergelijkt mtimes en draait dus alleen lokaal:
+    met --ci slaat ze over (zie Context.tijd).
     """
 
     id = "syllabus-stale"
