@@ -1,0 +1,7 @@
+# Alleen nodig voor de import- en exportcommando's; `check` gebruikt niets
+# buiten de standaardbibliotheek.
+python-docx
+pillow
+pypdf
+reportlab
+pypdfium2

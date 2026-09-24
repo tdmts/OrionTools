@@ -1,0 +1,18 @@
+# Line endings. The repo stores LF; each working copy gets whatever its
+# platform prefers. Without this, two authors on differently configured
+# editors produce diffs where every single line looks changed.
+* text=auto
+
+# Shell scripts must stay LF even in a Windows working copy: CRLF makes bash
+# fail with "$'\r': command not found" on the Linux CI runner.
+*.sh text eol=lf
+
+# Binary assets, never line-ending converted or diffed as text.
+*.png binary
+*.gif binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.svg binary
+*.ico binary
+*.pdf binary

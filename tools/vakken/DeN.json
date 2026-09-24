@@ -1,0 +1,8 @@
+{
+  "course": {"code": "DeN", "title": "Datacommunicatie en netwerken"},
+  "syllabus": {
+    "pdf": "Datacommunicatie-en-netwerken-syllabus.pdf",
+    "logo": "img/syllabus-cover-logo.png"
+  },
+  "handout": {"prefix": "DeN-handout-"}
+}

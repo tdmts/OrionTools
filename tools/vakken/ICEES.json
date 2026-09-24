@@ -1,0 +1,10 @@
+{
+  "course": {"code": "ICEES", "title": "Industriële computers en embedded systems"},
+  "syllabus": {
+    "pdf": "Industriele-computers-en-embedded-systems-syllabus.pdf",
+    "logo": "img/syllabus-cover-logo.png",
+    "vet_uit_de_word": false,
+    "krimp": {"dpi": 150, "onaangeroerd": []}
+  },
+  "handout": {"prefix": "ICEES-handout-"}
+}

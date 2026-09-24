@@ -1,0 +1,156 @@
+"""Wat elke regel nodig heeft over de vakrepo, een keer gelezen.
+
+Elke regel leest dezelfde pagina's. In de bash-versie van de check was dat een
+grep per regel, en een grep per bestand dreef een oudere versie naar 48
+seconden, voorbij de time-out van de Stop-hook. Hier wordt elk bestand een keer
+gelezen en git ls-files een keer gedraaid, en regels vragen het aan de context.
+"""
+
+import os
+import subprocess
+from functools import cached_property
+
+ORION_CSS = "https://tdmts.github.io/OrionCSS/style.css"
+ORION_JS = "https://tdmts.github.io/OrionCSS/main.js"
+
+
+class Bevinding:
+    __slots__ = ("regel", "pad", "regelnr", "boodschap", "ernst")
+
+    def __init__(self, regel, pad, boodschap, ernst="fout", regelnr=None):
+        self.regel, self.pad, self.boodschap = regel, pad, boodschap
+        self.ernst, self.regelnr = ernst, regelnr
+
+    def plaats(self):
+        return f"{self.pad}:{self.regelnr}" if self.regelnr else str(self.pad)
+
+
+class Context:
+    def __init__(self, vak, ci=False):
+        self.vak = vak
+        self.root = vak.root
+        self.config = vak.config
+        self.ci = ci                 # verouderingsregels op committijd, niet op mtime
+        self.bevindingen = []
+        self._teksten = {}
+        self._huidige_regel = None
+
+    # ---------------------------------------------------------- bevindingen
+
+    def fout(self, pad, boodschap, regelnr=None):
+        self.bevindingen.append(Bevinding(self._huidige_regel, self._rel(pad), boodschap,
+                                          "fout", regelnr))
+
+    def waarschuw(self, pad, boodschap, regelnr=None):
+        self.bevindingen.append(Bevinding(self._huidige_regel, self._rel(pad), boodschap,
+                                          "waarschuwing", regelnr))
+
+    def _rel(self, pad):
+        try:
+            return pad.relative_to(self.root).as_posix()
+        except (AttributeError, ValueError):
+            return str(pad)
+
+    # ----------------------------------------------------------- bestanden
+
+    @cached_property
+    def staging(self):
+        return set(self.config["staging"])
+
+    @cached_property
+    def getrackt(self):
+        """De getrackte paden (posix, relatief), of None zonder git."""
+        try:
+            uit = subprocess.run(["git", "ls-files", "-z"], cwd=self.root, capture_output=True,
+                                 text=True, encoding="utf-8", check=True).stdout
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return None
+        return set(filter(None, uit.split("\0")))
+
+    def overgeslagen(self, pad):
+        delen = pad.relative_to(self.root).parts
+        return ".git" in delen or "node_modules" in delen or bool(self.staging.intersection(delen))
+
+    @cached_property
+    def html(self):
+        """Elke html-pagina van de repo, buiten staging, gesorteerd."""
+        return [p for p in sorted(self.root.rglob("*.html")) if not self.overgeslagen(p)]
+
+    @cached_property
+    def sitepaginas(self):
+        """De html die een pagina van de site is: geen exempt, geen deck."""
+        exempt = set(self.config["exempt_pages"])
+        geen_site = set(self.config["non_site_dirs"])
+        uit = []
+        for p in self.html:
+            rel = p.relative_to(self.root)
+            if rel.as_posix() in exempt or p.name in exempt:
+                continue
+            if geen_site.intersection(rel.parts[:-1]):
+                continue
+            uit.append(p)
+        return uit
+
+    def tekst(self, pad):
+        if pad not in self._teksten:
+            self._teksten[pad] = pad.read_text(encoding="utf-8", errors="replace")
+        return self._teksten[pad]
+
+    def exacte_hoofdletters(self, doel):
+        """Staat elk segment onder de root er precies zo op schijf?
+
+        Windows en macOS zijn hoofdletterongevoelig, een webserver niet. Een link
+        naar 'opdracht.html' opent dus lokaal en breekt zodra de bestanden op een
+        server staan die wel onderscheid maakt. Elk segment wordt vergeleken met
+        de echte inhoud van zijn map. Bewust niet Path.resolve(): dat verbetert
+        de hoofdletters stil en dan test de regel niets meer.
+        """
+        try:
+            rel = doel.relative_to(self.root)
+        except ValueError:
+            return True  # buiten de repo, dat vangt een andere regel
+        huidig = self.root
+        for segment in rel.parts:
+            if segment in ("", "."):
+                continue
+            if segment == "..":
+                huidig = huidig.parent
+                continue
+            try:
+                if segment not in os.listdir(huidig):
+                    return False
+            except OSError:
+                return False
+            huidig = huidig / segment
+        return True
+
+    # --------------------------------------------------------------- tijd
+
+    @cached_property
+    def _committijden(self):
+        """Pad -> tijd van de laatste commit die het raakte, in een git log."""
+        tijden = {}
+        try:
+            uit = subprocess.run(["git", "log", "--format=@%ct", "--name-only", "-z"],
+                                 cwd=self.root, capture_output=True, text=True,
+                                 encoding="utf-8", check=True).stdout
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return tijden
+        huidig = 0
+        for stuk in uit.replace("\n", "\0").split("\0"):
+            if stuk.startswith("@"):
+                huidig = int(stuk[1:])
+            elif stuk and stuk not in tijden:
+                tijden[stuk] = huidig
+        return tijden
+
+    def tijd(self, pad):
+        """Wanneer pad laatst veranderde.
+
+        Lokaal is dat de mtime. In CI niet: een checkout zet elke mtime op het
+        moment van uitchecken, en dan is geen enkel afgeleid bestand ouder dan
+        zijn bron. Daar telt de laatste commit die het bestand raakte.
+        """
+        if self.ci:
+            return self._committijden.get(self._rel(pad), 0)
+        return pad.stat().st_mtime

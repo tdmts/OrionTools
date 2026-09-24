@@ -1,0 +1,55 @@
+# CLAUDE.md
+
+Guidance for Claude Code when working in this repository.
+
+## What this is
+
+The tooling shared by the Orion course repos (DeN, ICEES, IR, Microcontrollers), which sit beside
+this one under `Orion/`. It holds no course content. A course repo calls it by relative path from
+its own root:
+
+```
+python ../OrionTools/orion.py check
+python ../OrionTools/orion.py export-syllabus
+```
+
+Before this repo existed, every course carried a copy of the scripts, and the copies drifted apart:
+a fix made in one course never reached the others, and nothing noticed. That is the one problem
+this repo exists to solve, so **nothing here may know which course it runs for**. Everything that
+differs per course is read from `oriontools.json` in the course root. The keys, their defaults and
+the validation are in [`oriontools/config.py`](oriontools/config.py). An unknown key is an error,
+so a typo cannot silently fall back to a default.
+
+Public on purpose: a private course repo's CI checks it out without a token, and there is nothing
+in it a student may not see. Course names, the path to the Word and the like are course config, not
+code.
+
+## Layout
+
+```
+orion.py                 the entry point; one command per module, imported only when chosen
+oriontools/
+    repo.py              which course repo: --repo, else the git root of cwd; demands oriontools.json
+    config.py            oriontools.json: defaults, merge, validation
+    chrome.py            the one list of places a headless Chrome or Edge lives
+    check/               the content check: runner, rules/, audit, fix
+    export/              syllabus, handout, verslag, oplossing, pdf
+    importers/           brightspace, syllabus, slides
+tools/vakken/<code>.json the config of each course while it is not migrated yet (--config)
+tools/parity.py          old check against new, per course
+tests/fixtures/          one good and one bad tree per rule
+```
+
+## Conventions
+
+- Every command module has `main(argv) -> int` and adds the shared options with
+  `repo.voeg_repo_toe(parser)`, then gets its course with `vak = repo.vind(args)`. The course root
+  is `vak.root`; a configured folder is `vak.pad("decks")`. `Path(__file__)` never locates a course.
+- `check` uses the standard library only, and so does everything it imports. The Stop hook and CI
+  run it on a bare Python. Third-party imports (`docx`, `pypdf`, `reportlab`, `PIL`, `pypdfium2`)
+  happen inside the command that needs them. `requirements.txt` lists them.
+- Code and messages are in Dutch, as in the scripts this came from. The docstrings carry the
+  reasoning, next to the code it explains; they came over from the course repos with the code and
+  are the record of why a rule exists.
+- A fix belongs in all courses. If a behaviour genuinely differs per course, it gets a config key
+  with a default, never a branch on `vak.code`.

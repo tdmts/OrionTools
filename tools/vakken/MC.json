@@ -1,0 +1,5 @@
+{
+  "course": {"code": "MC", "title": "Microcontrollers"},
+  "check": {"orphan_roots": ["."]},
+  "export_pdf": {"group": "lab"}
+}

@@ -1,0 +1,8 @@
+{
+  "course": {"code": "IR", "title": "Industrial Robots"},
+  "check": {
+    "orphan_roots": ["."],
+    "remote_document_exts_extra": ["rspag", "rslib", "sat"]
+  },
+  "export_pdf": {"group": "module"}
+}
