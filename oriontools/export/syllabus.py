@@ -350,8 +350,8 @@ def zonder_scripts(fragment):
 # Een open vraag heeft er altijd een, want daar valt niets aan te duiden.
 #
 # Die twee markeringen zijn de hele bron. De PDF drukt er hieronder een sectie
-# Oplossingen uit; oplossingen.js maakt er op de site een uitklap van. Twee
-# weergaven van dezelfde inhoud dus, en niet twee plaatsen waar ze staat.
+# Oplossingen uit; OrionCSS main.js maakt er op de site een uitklap van.
+# Twee weergaven van dezelfde inhoud dus, en niet twee plaatsen waar ze staat.
 #
 # Waarom niet een geschreven oplossingenpagina naast de vragen? Omdat die de
 # letter van de mogelijkheid zou moeten herhalen ("2. b"). Verwissel dan ooit

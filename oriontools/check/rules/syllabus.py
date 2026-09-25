@@ -193,7 +193,7 @@ class VragenBeantwoord(Regel):
     Een vragenlijst is een <ol class="vragen">. Een meerkeuzevraag duidt precies
     een mogelijkheid aan met class="juist"; een open vraag draagt
     <div class="oplossing">. Uit die markering drukt de syllabusexport de sectie
-    Oplossingen achteraan het hoofdstuk en maakt oplossingen.js op de site een
+    Oplossingen achteraan het hoofdstuk en maakt OrionCSS main.js op de site een
     uitklap. De letter (a, b, c) wordt daarbij geteld in plaats van
     overgeschreven, zodat een verwisselde mogelijkheid geen fout antwoord kan
     opleveren. Een vraag met meer juiste antwoorden wordt herschreven, niet de
@@ -309,29 +309,6 @@ class VragenKlasse(Regel):
                                      "zonder die klasse ziet de export er geen vragen in en drukt "
                                      "ze er geen oplossingen bij")
                     break
-
-
-class OplossingenScript(Regel):
-    """Een syllabuspagina met vragen laadt oplossingen.js.
-
-    oplossingen.js vouwt het antwoord van elke vraag in een uitklap; zonder het
-    script staat het antwoord open onder de vraag, of (als de stijl het
-    verbergt) nergens. De PDF toont de antwoorden in de sectie Oplossingen
-    hoe dan ook, dus zonder deze include toont de PDF ze wel en de site niet.
-    """
-
-    id = "oplossingen-script"
-    legacy = ("DeN:14", "ICEES:14")
-
-    def van_toepassing(self, ctx):
-        return heeft_syllabus(ctx)
-
-    def controleer(self, ctx):
-        for pagina in syllabus_paginas(ctx):
-            tekst = ctx.tekst(pagina)
-            if vragen(tekst) and "oplossingen.js" not in tekst:
-                ctx.fout(pagina, "draagt vragen maar laadt oplossingen.js niet; de PDF toont de "
-                                 "antwoorden dan wel en de site niet")
 
 
 class ImporterGok(Regel):

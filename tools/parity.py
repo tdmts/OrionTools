@@ -30,6 +30,10 @@ beide checks precies hetzelfde melden, en dat elke bedoelde regel-id er
 tussen zit. Het raakt de echte repo niet aan; de kloon blijft staan om na te
 kijken.
 
+Een regel die na de overstap met opzet veranderde, valt buiten de vergelijking:
+NA_OVERSTAP hieronder, aan de nieuwe kant uit de telling, en de oude melding
+die ze verving krijgt geen id.
+
 Stdlib alleen, zoals de check.
 """
 
@@ -46,6 +50,12 @@ from pathlib import Path
 
 HIER = Path(__file__).resolve().parent.parent
 ORION = HIER / "orion.py"
+
+# Fase 2: main.js deed het werk van oplossingen.js en solution-reveal.js, en
+# oplossingen-script en solution-reveal-wiring maakten plaats voor een regel
+# die elke include van die twee afkeurt. In een checkout van voor de overstap
+# is dat elke pagina met een antwoord.
+NA_OVERSTAP = {"reveal-script-retired"}
 
 # Oude boodschap -> regel-id. De eerste die past, wint; volgorde telt.
 ORUD = [
@@ -80,7 +90,7 @@ ORUD = [
     (r"mogelijkheden met|open vraag zonder", "vragen-answered"),
     (r'begint op start=|mist start=', "vragen-numbering"),
     (r"met invulruimte eronder", "vragen-class"),
-    (r"laadt oplossingen\.js niet", "oplossingen-script"),
+    (r"laadt oplossingen\.js niet", None),          # NA_OVERSTAP
     (r"onopgeloste gok", "importer-guess"),
     (r"staat in img/ maar", "orphan-image"),
 ]
@@ -133,7 +143,7 @@ def draai_nieuw(repo, config):
     telling = Counter()
     for regel in uit.stdout.splitlines():
         m = NIEUW_RE.match(regel)
-        if m and m.group(3) != ".":
+        if m and m.group(3) != "." and m.group(2) not in NA_OVERSTAP:
             telling[(m.group(1), m.group(2), m.group(3))] += 1
     return telling, uit.stdout
 
@@ -270,9 +280,6 @@ def muteer(kloon, cfg, leeg_manifest=False):
         _schrijf(start[0], re.sub(r'(<ol class="vragen") start="\d+"', r"\1", _lees(start[0]),
                                   count=1))
         verwacht.add("vragen-numbering")
-    script = next(p for p in met_vragen if p not in (juist,) and "oplossingen.js" in _lees(p))
-    _schrijf(script, re.sub(r"<script[^>]*oplossingen\.js[^>]*>\s*</script>", "", _lees(script)))
-    verwacht.add("oplossingen-script")
     zonder = next(p for p in paginas if 'class="vragen"' not in _lees(p))
     _voor_body(zonder, '<ol><li>vraag<table class="invulruimte"><tr><td></td></tr></table>'
                        '</li></ol>\n<p data-geraden="parity">x</p>')
@@ -384,7 +391,7 @@ BASH_ORUD = {
               (r"^orion\.json: id ", "orion-ids"), (r"^orion\.json: ", "orion-targets")],
     "wiring": [(r"does not link the hosted", "orioncss-wiring"),
                (r"checklist|initChecklistSync", "checklist-wiring"),
-               (r"solution-container|solution-reveal", "solution-reveal-wiring"),
+               (r"solution-container|solution-reveal", "-"),      # NA_OVERSTAP
                (r"^[^ ]+:\d+:<(link|script)", "foreign-assets")],
     "asset": [(r"Brightspace hotlink", "brightspace-hotlink"), (r"remote image", "remote-image"),
               (r"remote document", "remote-document"), (r"YouTube", "youtube-referrer"),
@@ -437,6 +444,8 @@ def lees_bash(tekst):
             if rid is None:
                 onbekend.append(f"[{kop}] {item}")
                 continue
+            if rid == "-":
+                continue
             if rid.startswith("orion-") and rid != "orion-orphan":
                 pad = "orion.json"
         elif kop == "placeholder":
@@ -457,7 +466,7 @@ def lees_nieuw(tekst):
     standaard, audit = Counter(), Counter()
     for regel in tekst.splitlines():
         m = NIEUW_RE.match(regel)
-        if m and m.group(3) != ".":
+        if m and m.group(3) != "." and m.group(2) not in NA_OVERSTAP:
             doel = audit if m.group(2).startswith("audit-") else standaard
             doel[(m.group(1), m.group(2), m.group(3))] += 1
     return standaard, audit
@@ -553,7 +562,7 @@ def muteer_bash(kloon):
     ]
     verwacht |= {"em-dash", "links", "brightspace-hotlink", "remote-image", "remote-document",
                  "youtube-referrer", "exercise-name", "topic-frame", "solution-placement",
-                 "spoiler-retired", "solution-reveal-wiring"}
+                 "spoiler-retired"}
     if not arduino:
         regels += ['<a href="https://chamilo.hogent.be/doc?id=1" target="_blank">c</a>',
                    '<a href="https://example.com/p.rspag" target="_blank">r</a>',
@@ -687,7 +696,6 @@ def muteer_fix(kloon):
     shutil.copy(sorted(img.glob("*.png"))[0], img / "parity-untracked.png")
     shutil.copy(sorted(img.glob("*.png"))[1], img / "parity-orion.png")
     rel_img = os.path.relpath(img, gastheer.parent).replace("\\", "/")
-    rel_root = os.path.relpath(kloon, gastheer.parent).replace("\\", "/")
     _voor_body(gastheer, "\n".join([
         "<p>een zin — met een em-dash &mdash; en nog een</p>",
         "<p>eindigt op een em-dash —",
@@ -695,8 +703,14 @@ def muteer_fix(kloon):
         f'<img src="{rel_img}/parity-untracked.png" alt="">',
         '<iframe src="https://www.youtube.com/embed/abc" allowfullscreen></iframe>',
         '<iframe src="https://www.youtube-nocookie.com/embed/def"></iframe>',
-        f'<script src="{rel_root}/solution-reveal.js"></script>',
     ]))
+    # NA_OVERSTAP: de nieuwe --fix haalt elke include van solution-reveal.js
+    # weg, de oude alleen een zonder solution-container. Weg in beide klonen,
+    # dan vergelijkt de rest van de ronde nog iets.
+    for p in kloon.rglob("*.html"):
+        if ".git" not in p.parts and "solution-reveal.js" in _lees(p):
+            _schrijf(p, re.sub(r'[ \t]*<script src="[^"]*solution-reveal\.js"></script>[ \t]*\r?\n',
+                               "", _lees(p)))
     if arduino:
         code = next(kloon / p for p in paginas
                     if '<pre class="code-wrapper language-cpp' in _lees(kloon / p))

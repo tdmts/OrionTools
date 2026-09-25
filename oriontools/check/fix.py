@@ -2,7 +2,7 @@
 
 Alleen wat precies een juist antwoord heeft: een em-dash, een K&R-accolade die
 de regel afsluit, de spaties rond een operator, een ontbrekende
-referrerpolicy, een solution-reveal.js die niets meer te tonen heeft, en een
+referrerpolicy, de include van een reveal-script dat met pensioen is, en een
 asset die bestaat maar nooit gestaged werd. Wat woorden vraagt (een menutitel)
 of een beslissing (waar in orion.json een weespagina hoort, hoe een gedownloade
 afbeelding moet heten), blijft voor het rapport erna.
@@ -33,7 +33,8 @@ KR_SPLITS_RE = re.compile(r"^([ \t]*)(\S.*?)[ \t]*\{[ \t]*(\r?)$")
 PRE_PREFIX_RE = re.compile(r'^(\s*<pre class="code-wrapper[^>]*>(?:<code>)?)')
 YOUTUBE_RE = re.compile(r"youtube(?:-nocookie)?\.com/embed")
 POLICY = 'referrerpolicy="strict-origin-when-cross-origin"'
-REVEAL_INCLUDE_RE = re.compile(r'^\s*<script src="[^"]*solution-reveal\.js"></script>\s*\r?$')
+REVEAL_INCLUDE_RE = re.compile(
+    r'^\s*<script src="[^"]*(?:oplossingen|solution-reveal)\.js"></script>\s*\r?$')
 
 
 def _git(ctx, *args):
@@ -156,14 +157,14 @@ def _herstel_pagina(ctx, pad, meld):
         meld(pad, "referrerpolicy op een YouTube-embed")
     tekst = "\n".join(uit)
 
-    # Een solution-reveal.js zonder solution-container: een losse <script>-regel,
-    # dus precies een juist herstel.
-    if "solution-reveal.js" in tekst and not re.search(r'class="[^"]*solution-container', tekst):
-        regels = tekst.split("\n")
-        over = [r for r in regels if not REVEAL_INCLUDE_RE.match(r)]
-        if len(over) != len(regels):
-            meld(pad, "ongebruikte solution-reveal.js-include weggehaald")
-            tekst = "\n".join(over)
+    # oplossingen.js of solution-reveal.js (reveal-script-retired): main.js doet
+    # hun werk, en de include is een losse <script>-regel, dus precies een juist
+    # herstel.
+    regels = tekst.split("\n")
+    over = [r for r in regels if not REVEAL_INCLUDE_RE.match(r)]
+    if len(over) != len(regels):
+        meld(pad, "include van een reveal-script met pensioen weggehaald")
+        tekst = "\n".join(over)
 
     if tekst != oud:
         pad.write_text(tekst, encoding="utf-8", newline="")
