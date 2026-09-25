@@ -35,6 +35,7 @@ oriontools/
     check/               the content check: runner, rules/, audit, fix
     export/              syllabus, handout, verslag, oplossing, pdf
     importers/           brightspace, syllabus, slides
+tests/                   a fixture per rule, and check --fix; `python -m unittest` from this root
 tools/parity.py          old check against new, per course
 ```
 
@@ -60,6 +61,11 @@ slug, never a number), `legacy` (the old per-course numbers, or `()` for a new r
 exists, and returns a short reason when it does not. The class docstring is the reason the rule
 exists; `check --explain <id>` prints it. The contract is in the header of
 [`oriontools/check/regel.py`](oriontools/check/regel.py).
+
+Give it a test class in `tests/` as well, with at least one `test_goed*` and one `test_fout*`;
+`tests/test_dekking.py` fails without them. How a fixture is built, and why a rule that does not
+apply fails the test instead of passing it, is in the docstring of
+[`tests/minivak.py`](tests/minivak.py). Run the tests after any change under `oriontools/check/`.
 
 A new rule applies to every course by default. A course that does not want it opts out in its own
 `oriontools.json` with `check.disable: {"<id>": "<reason>"}`, never by a branch here.
