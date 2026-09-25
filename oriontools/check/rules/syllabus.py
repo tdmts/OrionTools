@@ -232,7 +232,8 @@ class VragenBeantwoord(Regel):
                     if len(juist) != 1:
                         ctx.fout(pagina, f"vraag {nummer} heeft {len(juist)} mogelijkheden met "
                                          f'class="juist"; het moeten er precies een zijn, anders {gevolg}')
-                elif not re.search(r'<div class="oplossing">\s*\S', inhoud):
+                # Een lege div telt niet: de export leest er geen antwoord in.
+                elif not re.search(r'<div class="oplossing">(?!\s*</div>)\s*\S', inhoud):
                     ctx.fout(pagina, f"vraag {nummer} is een open vraag zonder "
                                      f'<div class="oplossing">; zonder dat antwoord {gevolg}')
 

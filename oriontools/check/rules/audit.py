@@ -368,7 +368,7 @@ class AuditFiguur(AuditRegel):
             cellen = sum(bool(re.search(r"<t[dh][ >].*<img", r)) for r in regels)
             figs = sum("<figure" in r for r in regels)
             if imgs - cellen > figs:
-                ctx.waarschuw(pad, f"{imgs - cellen} <img> buiten een tabel maar maar {figs} "
+                ctx.waarschuw(pad, f"{imgs - cellen} <img> buiten een tabel maar {figs} "
                                    "<figure> (een afbeelding hoort in een figure)")
 
 
