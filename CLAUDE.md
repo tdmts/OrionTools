@@ -39,8 +39,17 @@ oriontools/
     importers/           brightspace, syllabus, slides
 tests/                   a fixture per rule, and check --fix; `python -m unittest` from this root
 SCHRIJFSTIJL.md          the shared prose style; each course's own SCHRIJFSTIJL.md only adds to it
+skills/                  the procedures of the orion-* Claude skills; each course's SKILL.md only adds to one
 tools/parity.py          old check against new, per course
 ```
+
+The skills work like `SCHRIJFSTIJL.md`: `skills/check.md` holds the procedure, and a course's
+`.claude/skills/orion-check/SKILL.md` carries the description Claude triggers on plus what that course
+does differently. Rule `skill-basis` holds the two together; its docstring says why the copies per
+course went. Not a plugin, decided 25 September 2026: a plugin needs a trust prompt and a
+marketplace path per repo, and gives every course the same five skills with one description, while a
+course here chooses which skills it has (only a course with `export_pdf` has `orion-pdf`) and what a
+unit is called in its description.
 
 ## Conventions
 
