@@ -595,7 +595,7 @@ def voorblad(doc, titel, intro):
 
     # Alleen wat de student van ons moet horen: invullen en indienen. Waarom dit
     # een document is en geen invulveld op een pagina, is een afweging van ons
-    # (patroon 18), en waar hij het bewaart is zijn zaak (patroon 19).
+    # (patroon 18), en waar hij het bewaart is zijn zaak (18 ook, het voorschrift).
     p = doc.add_paragraph()
     run = p.add_run(
         "Vul dit document in terwijl je werkt. "

@@ -36,6 +36,7 @@ oriontools/
     export/              syllabus, handout, verslag, oplossing, pdf
     importers/           brightspace, syllabus, slides
 tests/                   a fixture per rule, and check --fix; `python -m unittest` from this root
+SCHRIJFSTIJL.md          the shared prose style; each course's own SCHRIJFSTIJL.md only adds to it
 tools/parity.py          old check against new, per course
 ```
 

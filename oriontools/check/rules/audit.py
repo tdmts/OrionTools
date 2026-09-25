@@ -18,8 +18,10 @@ meer, zodat de beslissing in het bestand staat dat afwijkt en de audit naar
 nul kan. Een audit die niemand stil kan krijgen, leest niemand.
 
 De woordenlijsten hieronder zijn de gedeelde standaard; een vak vult ze aan
-met check.audit.*_extra in oriontools.json. Ze komen uit SCHRIJFSTIJL.md, uit
-de vier van zijn patronen die een grep kan zien (9, 11/12 en 13). De andere
+met check.audit.*_extra in oriontools.json. Ze komen uit SCHRIJFSTIJL.md in de
+root van OrionTools, uit de drie van zijn patronen die een grep kan zien (9, 12
+en 13); tests/test_schrijfstijl.py kijkt na dat elk nummer dat hier geciteerd
+wordt, daar een kop is. De andere
 (een slotzin met pointe, een retorische drieslag) vragen een lezer, en precies
 daarom zijn deze vier adviserend: een stijlronde die op het mechanische derde
 blokkeert, gaf de rest een gezag dat ze nooit verdiend heeft.
@@ -41,8 +43,8 @@ STOCK_LEAD = ["Hier lees je", "Hier zie je", "Hier ontdek je", "Hieronder lees j
               "Hieronder zie je", "Op deze pagina (lees|zie|ontdek|vind|leer) je",
               "Op deze pagina (behandelen|bespreken) we", "In dit artikel"]
 
-# Patroon 11 (12 in ICEES en IR): een verkleinwoord dat een onderdeel
-# opsmukt. Een expliciete lijst en geen -je/-tje-regex: die raakt ook
+# Patroon 12: een verkleinwoord dat een onderdeel opsmukt (tot de basis in
+# OrionTools kwam, was dat 11 in DeN en Microcontrollers). Een expliciete lijst en geen -je/-tje-regex: die raakt ook
 # "haakjes", "netjes", "eventjes", "oranje" en "vrije", en kan een versiering
 # niet onderscheiden van de vaste term voor een onderdeel ("pootjes",
 # "rekstrookje", "ezelsbruggetje" staan er bewust niet in). De lijst mag
@@ -203,7 +205,7 @@ class AuditVerkleinwoord(AuditRegel):
     def controleer(self, ctx):
         _woordregel(ctx, self, DIMINUTIVES, "diminutives_extra",
                     "'{}' is een verkleinwoord dat een onderdeel opsmukt, noem het ding "
-                    "(SCHRIJFSTIJL.md)")
+                    "(SCHRIJFSTIJL.md 12)")
 
 
 class AuditNoordNederlands(AuditRegel):
