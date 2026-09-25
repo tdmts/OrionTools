@@ -283,12 +283,16 @@ maken, noem je bij zijn naam.
 >
 > **Na:** Zoek naar de tekening van het IC met acht aansluitingen en de namen ernaast.
 
-De uitzondering, en die is echt: **een verkleinwoord dat de gangbare vakterm is, blijft.** De
-buitenste **pootjes** van een potentiometer heten zo, `rekstrookje` is de Nederlandse naam van het
-onderdeel, en een `ezelsbruggetje` heet niet anders. Ook vaste uitdrukkingen ("tussen haakjes", "een
-beetje") zijn geen opsmuk. De vraag is niet of er een verkleinvorm staat, maar of er een gewoon woord
-bestaat dat hetzelfde zegt. De lijst van `--audit` is daarom opzettelijk kort en bevat geen enkele
-vakterm.
+De uitzondering, en die is echt: **een verkleinwoord dat de gangbare vakterm is, blijft.**
+`rekstrookje` is de Nederlandse naam van het onderdeel, en een `ezelsbruggetje` heet niet anders. Ook
+vaste uitdrukkingen ("tussen haakjes", "een beetje") zijn geen opsmuk. De vraag is niet of er een
+verkleinvorm staat, maar of er een gewoon woord bestaat dat hetzelfde zegt. De lijst van `--audit` is
+daarom opzettelijk kort en bevat geen enkele vakterm.
+
+`pootje` valt niet onder die uitzondering, ook niet bij een potentiometer, al is het in de werkplaats
+gangbaar: het gewone woord bestaat. Een potentiometer of een component op een breadboard heeft
+**aansluitingen**, een IC, een transistor of een display heeft **pinnen**. Voor studenten in het hoger
+onderwijs leest het verkleinwoord kinderachtig (beslist 2026-09-25, eerst in Microcontrollers).
 
 ### 13. Geen vulling, van een bijwoord tot een hele bijzin
 

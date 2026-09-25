@@ -46,13 +46,14 @@ STOCK_LEAD = ["Hier lees je", "Hier zie je", "Hier ontdek je", "Hieronder lees j
 # Patroon 12: een verkleinwoord dat een onderdeel opsmukt (tot de basis in
 # OrionTools kwam, was dat 11 in DeN en Microcontrollers). Een expliciete lijst en geen -je/-tje-regex: die raakt ook
 # "haakjes", "netjes", "eventjes", "oranje" en "vrije", en kan een versiering
-# niet onderscheiden van de vaste term voor een onderdeel ("pootjes",
-# "rekstrookje", "ezelsbruggetje" staan er bewust niet in). De lijst mag
-# groeien, maar krijgt nooit een technische term. Meet de tekst van het vak
-# voor je aanvult.
+# niet onderscheiden van de vaste term voor een onderdeel ("rekstrookje",
+# "ezelsbruggetje" staan er bewust niet in). De lijst mag groeien, maar krijgt
+# nooit een technische term. "pootjes" staat er sinds 2026-09-25 wel in: ook
+# waar het gangbaar is, bestaat het gewone woord (aansluiting, pin), zie
+# SCHRIJFSTIJL.md 12. Meet de tekst van het vak voor je aanvult.
 DIMINUTIVES = ["eentje", "blokjes?", "draadjes?", "schermpje", "lampje", "knopje", "regeltje",
                "woordje", "zinnetje", "lettertje", "motortje", "rommeltje", "duwtje", "trucje",
-               "lijstjes?", "stukjes?", "stapjes?"]
+               "lijstjes?", "stukjes?", "stapjes?", "pootjes?"]
 
 # Patroon 12: Noord-Nederlandse woordkeuze in een cursus voor Vlaamse
 # studenten. "best" ("neem best een weerstand") is Belgisch Nederlands en
