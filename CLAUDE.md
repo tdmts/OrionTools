@@ -34,7 +34,7 @@ oriontools/
     chrome.py            the one list of places a headless Chrome or Edge lives
     huisstijl.py         where the stylesheets of the exports live, here and in OrionCSS
     check/               the content check: runner, rules/, audit, fix
-    export/              syllabus, handout, verslag, oplossing, pdf
+    export/              syllabus, handout, verslag, oplossing, pdf, qti
     export/stijl/        syllabus.css and handout.css, shared by every course
     importers/           brightspace, syllabus, slides
 tests/                   a fixture per rule, and check --fix; `python -m unittest` from this root

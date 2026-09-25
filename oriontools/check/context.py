@@ -93,6 +93,7 @@ class Context:
         loopt en riep de Stop-hook bij elke beurt, en zo leer je haar niet meer
         lezen. _oplossingen houdt modeloplossingen die .gitignore buiten git
         houdt: OrionSync spiegelt ze nooit, dus er is niets om na te kijken.
+        _toets houdt toetsvragen voor export-qti, om dezelfde reden buiten git.
         _export is eigen uitvoer. De lijst is config "staging".
         """
         delen = pad.relative_to(self.root).parts
