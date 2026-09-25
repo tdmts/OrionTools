@@ -2,6 +2,7 @@
 
 import re
 
+from ... import huisstijl
 from ..regel import Regel
 from ._gedeeld import lokaal_doel
 
@@ -52,7 +53,9 @@ class HandoutVerouderd(Regel):
     Ook hoorcollege.css en handout.css tellen mee, voor elke handout. De bundel
     laadt de eerste (wat een slide is) en legt de tweede erover (wat het blad
     ermee doet), dus een wijziging daar verandert elk gedrukt blad zonder dat er
-    een slide aan te pas komt.
+    een slide aan te pas komt. Ze staan buiten het vak, in OrionCSS en in
+    OrionTools (zie oriontools/huisstijl.py), dus een git pull daar kan elke
+    handout van elk vak verouderen, en dat klopt: de export drukt ze af.
 
     En de afbeeldingen die het deck insluit tellen mee, want een handout drukt
     die af en niet de slide waar ze in staat. Dat was geen theorie: vier
@@ -83,7 +86,8 @@ class HandoutVerouderd(Regel):
 
     def controleer(self, ctx):
         decks = ctx.vak.pad("decks")
-        stijlen = [s for s in (decks / "hoorcollege.css", decks / "handout.css") if s.exists()]
+        stijlen = [s for s in (huisstijl.hoorcollege_css(), huisstijl.handout_css())
+                   if s.exists()]
         for deck in sorted(decks.glob("*.html")):
             pdf = handout_van(ctx, deck)
             if not pdf.exists():

@@ -1,0 +1,391 @@
+/*
+ * syllabus.css -- de huisstijl van de gedrukte syllabus.
+ *
+ * Dit is de ENIGE plaats waar staat hoe het PDF-document eruitziet, voor elk
+ * vak met een syllabus. `orion.py export-syllabus` linkt dit bestand en zet
+ * zelf geen opmaak meer; staat er hier niets over, dan hoort het hier bij te
+ * komen en niet in het script en niet in een style-attribuut op een pagina.
+ *
+ * Het staat in OrionTools en niet in het vak, omdat alleen de export het leest:
+ * geen pagina linkt het, dus in de cursusbestanden heeft het niets te zoeken.
+ * DeN en ICEES droegen elk een kopie, en die van ICEES had er al vier regels
+ * bij gekregen die DeN miste. De twee icoontjes van de kaders staan ernaast,
+ * want de url()'s hieronder lossen op tegen deze map.
+ *
+ * Er staat er precies een op de pagina's, --figuur-breedte, en die is geen
+ * uitzondering op die regel maar valt erbuiten: het is de breedte die de Word
+ * aan een afbeelding geeft, ingelezen door `orion.py import-syllabus` zoals een
+ * rowspan ingelezen wordt. Wat deze bladspiegel ermee doet staat hieronder,
+ * bij figure img.
+ *
+ * WAAROM DIT NAAST OrionCSS BESTAAT
+ *
+ * OrionCSS is de huisstijl van de SITE, en die wordt hier niet gekopieerd of
+ * aangepast. Dit is de huisstijl van een DOCUMENT: de cursus
+ * die de student afdrukt, met de cover van het departement, genummerde
+ * hoofdstukken, een lopende kop- en voettekst en de zwarte en turkooizen
+ * kaders van HOGENT. Die twee dekken elkaar niet, en de student ziet alleen
+ * deze: van de syllabus bestaat er voor hem niets anders dan de PDF.
+ *
+ * De pagina's onder paths.syllabus_dir laden dit bestand NIET. Op het scherm
+ * blijven ze gewone sitepagina's met OrionCSS. Alleen de bundel die naar de
+ * PDF gaat, laadt dit.
+ *
+ * ALLE MATEN ZIJN NAGEMETEN, niet gekozen. De syllabus van DeN
+ * (DEN Syllabus 20250912.pdf) is bladzijde per bladzijde uitgerenderd en in
+ * millimeter opgemeten; vandaar de cijfers achter de komma. Wie hier iets
+ * verandert, wijkt af van dat document, en dat is een beslissing.
+ *
+ * DIE MATEN ZIJN NIET HERMETEN OP ICEES. Het sjabloon van HOGENT is hetzelfde,
+ * maar ICEES Syllabus 20250912.pdf is er niet naast gelegd. Wijkt de gedrukte
+ * PDF van ICEES ergens af van wat de student gewend is, dan is dat het eerste
+ * om na te kijken.
+ */
+
+:root {
+    --turkoois: #16B0A5;    /* de balk van Studievragen en zijn afsluitlijn */
+    --blauw: #4CA2D5;       /* de titel op de cover */
+    --grijs-licht: #F2F2F2; /* de bandering in de tabellen */
+    --grijs-lijn: #D9D9D9;  /* de tabelranden */
+    --grijs-tekst: #737373;
+}
+
+/* ------------------------------------------------------------- bladspiegel */
+
+/* De tekst loopt van 25 tot 185.1mm, precies zoals in de Word. */
+@page { size: A4; margin: 30.8mm 24.9mm 26mm 25mm; }
+@page cover { margin: 0; }
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    line-height: 1.345;         /* 4.75mm hart-op-hart */
+    color: #000;
+    text-align: justify;        /* de syllabus is uitgevuld */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+p { margin: 0 0 4.3mm 0; }
+
+a { color: inherit; text-decoration: none; }
+
+/* --------------------------------------------------------------- koppen */
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    text-align: left;
+    page-break-after: avoid;
+    margin: 0 0 1.9mm 0;
+}
+
+h1 { font-size: 17pt; }
+h2 { font-size: 13pt; margin-top: 6.5mm; }
+h3 { font-size: 11pt; margin-top: 5mm; }
+h4, h5, h6 { font-size: 10pt; margin-top: 4.3mm; }
+
+/* Het nummer staat in de marge, de titel op een vaste tabstop van 40.4mm.
+   Zonder deze vaste breedte schuift "1.1" de titel verder op dan "1". */
+.kop-nr { display: inline-block; width: 15.4mm; }
+
+/* ------------------------------------------------------- wat waar begint */
+
+/*
+ * Elke paginaovergang hangt aan een BLOK en niet aan de kop erin. Een h1 is
+ * binnen zijn wrapper weer de eerste van zijn soort, dus een uitzondering op
+ * h1:first-of-type liet elk hoofdstuk stil doorlopen onderaan de vorige
+ * bladzijde. Dat is precies het soort fout dat er goed uitziet tot je telt.
+ */
+
+/* De opening van een hoofdstuk (de titel met de kernpunten en de studievragen)
+   staat in de syllabus alleen op zijn bladzijde: na de afsluitlijn van
+   Studievragen blijft de rest van het blad leeg en begint 1.1 op de volgende. */
+.hoofdstuk-opening { page-break-before: always; page-break-after: always; }
+
+/* Een sectie draagt in data-sectie haar eigen naam, afgeleid van de
+   bestandsnaam van haar bronpagina. Zo staat hier, en niet in het exportscript,
+   welke soort sectie een nieuwe bladzijde krijgt. Een Test jezelf is een toets:
+   die hoort niet halverwege een blad te beginnen onder de theorie die ze
+   overhoort. De regel geldt meteen voor elk hoofdstuk.
+
+   De oplossingen krijgen om dezelfde reden een eigen blad: ze staan achter de
+   vragen die ze beantwoorden, niet eronder. */
+section[data-sectie="test-jezelf"],
+section[data-sectie="oplossingen"] { page-break-before: always; }
+
+/* Een sectie met vragen sluit de bladzijde af. Anders begint de theorie erna
+   onder de laatste vraag, en dan staat een oefening die de student invult op
+   hetzelfde blad als de uitleg die er niet bij hoort: 2.4 Glasvezelkabel (DeN) begon
+   halverwege het blad waar 2.3 RJ-45 vs M12 op eindigde.
+
+   Alleen erna, niet ervoor. Waar een vragenreeks begint, is een keuze per soort
+   (een Test jezelf hierboven begint wel op een nieuw blad, een oefening
+   halverwege een hoofdstuk niet), maar waar ze eindigt is dat niet: de vragen
+   houden hun eigen blad tot het einde. */
+section[data-vragen] { page-break-after: always; }
+
+/* Alleen het allereerste blok begint niet op een nieuwe bladzijde; anders staat
+   er een lege bladzijde voor het Voorwoord. */
+body > :first-child { page-break-before: avoid; }
+
+/* ------------------------------------------------------------- opsommingen */
+
+/* Het opsommingsteken staat op 8.4mm van de marge, de tekst op 14.7mm, en een
+   tweede regel lijnt uit op die tekst. Met list-style regelt de browser die
+   afstand zelf en dan klopt hij niet; vandaar de ::before. */
+ul, ol { margin: 0 0 4.3mm 0; padding: 0; list-style: none; }
+ul > li, ol > li { position: relative; padding-left: 14.7mm; }
+ul > li::before { content: "\2022"; position: absolute; left: 8.4mm; }
+/* Geteld wordt met list-item, de counter die de browser zelf bijhoudt, en niet
+   met een eigen counter-reset. Alleen list-item luistert naar het start-attribuut,
+   en dat attribuut draagt de doorlopende nummering van een Test jezelf die door
+   een tussenzin in twee <ol>'s uiteenvalt. Met een eigen counter begint die
+   tweede lijst weer bij 1 terwijl de Oplossingen ernaast 6, 7 en 8 zeggen. */
+ol > li::before { content: counter(list-item) "."; position: absolute; left: 8.4mm; }
+
+/* Een lijst in een lijst springt mee in. */
+li > ul, li > ol { margin: 0; }
+li > ul > li, li > ol > li { padding-left: 8.4mm; }
+li > ul > li::before, li > ol > li::before { left: 2.1mm; }
+
+/* In een vragenlijst is een opsomming onder een vraag geen opsomming maar de
+   antwoordmogelijkheden, en die dragen a, b, c. Een bolletje is daar niet
+   alleen minder duidelijk, het maakt de oplossing onuitspreekbaar: die verwijst
+   met "2. b" naar de tweede mogelijkheid en heeft dus een letter nodig om naar
+   te wijzen. Waaraan de opmaak dat ziet, is de klasse vragen op de <ol> zelf;
+   daarbuiten blijft een opsomming een opsomming.
+
+   Dit hing aan [data-sectie="test-jezelf"], en dus aan de bestandsnaam van de
+   bronpagina. Een oefening halverwege een hoofdstuk stelt dezelfde soort vraag
+   en drukte haar mogelijkheden als bolletjes, terwijl de oplossing ernaast wel
+   een letter noemde. De vragenlijst zegt nu zelf wat ze is. */
+/* Een vraag blijft heel. Ze draagt vaak een foto en daaronder de ruimte waar de
+   student antwoordt, en die twee horen samen: in 2.1 Hardware herkennen (ICEES) stond de
+   foto van vraag 28 onderaan een blad en de vier invulregels bovenaan het
+   volgende. Bij een meerkeuzevraag scheelt het even veel, want een mogelijkheid
+   die alleen op de volgende bladzijde staat, wordt overgeslagen. */
+ol.vragen > li { page-break-inside: avoid; break-inside: avoid; }
+
+ol.vragen > li > ul { counter-reset: keuze; }
+ol.vragen > li > ul > li { counter-increment: keuze; }
+ol.vragen > li > ul > li::before { content: counter(keuze, lower-alpha) "."; }
+
+/* De oplossingen zijn een genummerde lijst die met de vragen meeloopt, dus het
+   nummer ervoor is dat van de vraag. De letter erachter is het antwoord. */
+.oplossingen .keuze { font-weight: 700; margin-right: 1.6mm; }
+
+/* ------------------------------------------------------------------ citaat */
+
+/*
+ * Een citaat. Het Voorwoord van ICEES opent met de vergelijking van het Intel Museum
+ * over een vlucht New York - Parijs, en als gewone alinea was die niet van de
+ * tekst erna te onderscheiden: de zin daaronder begint met "Met deze quote" en
+ * verwees naar een alinea die er niet als quote uitzag.
+ *
+ * GEEN VAN DEZE MATEN IS GEKOZEN. Ze zijn alle vier uit dit bestand geleend,
+ * want er is geen bestaand citaat in de syllabus om iets aan op te meten:
+ * de lijn is de afsluitlijn van het kader Studievragen (1.1mm turkoois), de
+ * inspringing is de eerste tabstop van een opsomming (8.4mm), de ondermarge is
+ * die van een alinea (4.3mm), en de bronregel is de figuurbijschriftregel
+ * (9pt grijs, 1.5mm eronder). Wie hier iets verandert, meet het na in de PDF.
+ *
+ * De bronregel staat rechts, want links eronder leest ze als een nieuwe alinea
+ * van het citaat zelf.
+ *
+ * Op de site is dit een gewone blockquote: OrionCSS heeft geen opmaak voor een
+ * citaat, dus daar springt ze alleen in. Dat is geen gebrek, want van de
+ * syllabus bestaat voor de student alleen de PDF.
+ */
+blockquote {
+    margin: 0 0 4.3mm 0;
+    padding-left: 8.4mm;
+    border-left: 1.1mm solid var(--turkoois);
+    font-style: italic;
+    break-inside: avoid;
+}
+
+blockquote > :last-child { margin-bottom: 0; }
+
+blockquote cite {
+    display: block;
+    font-style: normal;
+    font-size: 9pt;
+    color: var(--grijs-tekst);
+    text-align: right;
+    margin-top: 1.5mm;
+}
+
+/* ------------------------------------------------------------------ kaders */
+
+/*
+ * Een kader is een balk over de volle tekstbreedte met een wit opschrift en
+ * een icoon, en een streep die het blok afsluit. Zwart voor Kernpunten,
+ * turkoois voor Studievragen. De markup is die van OrionCSS (.info-box), zodat
+ * dezelfde pagina op de site blijft werken; welk kader het is, staat in
+ * data-kader, want de kleur hangt van het soort kader af en niet van de
+ * OrionCSS-klasse.
+ */
+.info-box {
+    margin: 0 0 6.5mm 0;
+    padding-bottom: 6mm;
+    border-bottom: 0.9mm solid #000;
+    break-inside: avoid;
+}
+
+.info-box .info-title {
+    background-color: #000;
+    background-repeat: no-repeat;
+    background-position: 2.4mm 0.9mm;
+    background-size: 4.2mm 4.2mm;
+    color: #fff;
+    font-size: 10pt;
+    font-weight: 700;
+    height: 10.2mm;
+    padding: 1.3mm 0 0 10.2mm;
+    margin-bottom: 2.5mm;
+}
+
+.info-box[data-kader="kernpunten"] .info-title {
+    background-image: url("syllabus-kader-kernpunten.png");
+}
+
+.info-box[data-kader="studievragen"] {
+    border-bottom-width: 1.1mm;
+    border-bottom-color: var(--turkoois);
+}
+.info-box[data-kader="studievragen"] .info-title {
+    background-color: var(--turkoois);
+    background-image: url("syllabus-kader-studievragen.png");
+}
+
+.info-box > :last-child { margin-bottom: 0; }
+
+/* --------------------------------------------------------------- tabellen */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 4.3mm 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+}
+th, td {
+    border: 0.2mm solid var(--grijs-lijn);
+    padding: 1.1mm 1.6mm;
+    vertical-align: top;
+    text-align: left;
+}
+thead th { font-weight: 700; background-color: var(--grijs-licht); }
+tbody tr:nth-child(odd) td { background-color: var(--grijs-licht); }
+
+/* Een invulkader is er om in te schrijven, dus het krijgt geen bandering. */
+.invulruimte tbody tr td { background-color: transparent; height: 6mm; }
+
+/* Een tekenopdracht vraagt geen regels maar een vlak. Invulruimte kent alleen
+   rijen, en een rij meet er ruim zeven millimeter: daar teken je geen schema
+   met zes blokken en pijlen in. Vraag 2 van hoofdstuk 5 van ICEES laat de figuur van 5.1
+   natekenen, en die staat op papier 90.9mm hoog, dus zoveel ruimte staat er
+   onder de vraag. Die maat is afgeleid van wat erin moet en niet gekozen.
+
+   De 89.7mm hieronder is nagemeten en niet gerekend: de rand wordt op de rand
+   van de cel getekend en niet ernaast, dus het kader meet er op papier 90.0mm
+   mee. Meet het opnieuw na als de rand of de opvulling van een cel verandert. */
+.tekenkader tbody tr td { height: 89.7mm; }
+
+/* Een tabel met een lege kolom is voor de helft invulruimte: links de
+   definitie, rechts wat de student erbij schrijft. Chrome verdeelt een tabel
+   over haar inhoud en houdt voor een lege cel niets over dan haar opvulling,
+   dus die kolom moet haar breedte krijgen. Ze komt uit de Word, als
+   --kolom-breedte op de <col>, en table-layout: fixed is wat haar laat gelden
+   tegenover een kolom vol tekst. */
+.invulkolom { table-layout: fixed; }
+.invulkolom col { width: var(--kolom-breedte); }
+.invulkolom tbody tr td.invulruimte { background-color: transparent; }
+
+/* De table-wrappers van OrionCSS zijn er voor een scrollbalk op het scherm.
+   Op papier scrollt er niets. */
+.table-responsive, .table-spacer { overflow: visible; margin: 0; }
+
+/* ------------------------------------------------------------ afbeeldingen */
+
+figure { margin: 0 0 4.3mm 0; text-align: center; page-break-inside: avoid; }
+
+/* Zonder --figuur-breedte valt een afbeelding terug op haar pixelmaat bij
+   96 dpi, en die hangt af van hoe de schermafdruk genomen is: de foto van een
+   ethernetkabel is 550 pixels breed en wordt dan 145mm, bijna de hele
+   bladspiegel, voor een kabel. De Word zet haar op 50.4mm. max-width houdt
+   een figuur binnen de bladspiegel, ook als de Word breder gaat. */
+figure img { width: var(--figuur-breedte, auto); max-width: 100%; height: auto; }
+figcaption { font-size: 9pt; color: var(--grijs-tekst); text-align: center; margin-top: 1.5mm; }
+
+/* Een figuur waar een hele reeks vragen naar wijst, hoort op hetzelfde blad als
+   die vragen. Anders staat de foto onderaan een bladzijde en vult de student de
+   helft van de nummers in terwijl hij ernaar terugbladert: 2.1 Hardware
+   herkennen (ICEES) zette het moederbord met 10 tot 13 op het ene blad en 14 tot 17 op
+   het volgende.
+
+   page-break-inside op de figuur alleen helpt daar niet tegen: die houdt de
+   afbeelding heel en zegt niets over wat eronder staat. Vandaar deze omhulling,
+   die de figuur en haar vragenlijst tot een blok maakt.
+
+   Ze werkt alleen zolang dat blok op een bladzijde past. Chrome negeert een
+   avoid die niet uit kan, en dan breekt het blok alsnog, zonder dat er iets
+   faalt. Blijf dus onder de bladspiegel van 240mm; de foto is de knop waar je
+   aan draait. */
+.vragen-bij-figuur { page-break-inside: avoid; break-inside: avoid; }
+
+code, pre, kbd, samp { font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
+pre { white-space: pre-wrap; text-align: left; }
+
+/* ------------------------------------------------------------------ cover */
+
+/*
+ * De cover staat op een eigen @page zonder marges, want de voetstrook loopt
+ * tot 281mm en dat valt buiten elke redelijke ondermarge. Alle posities zijn
+ * daarom absoluut, gemeten vanaf de bladrand.
+ */
+.cover {
+    page: cover;
+    position: relative;
+    width: 210mm;
+    height: 296mm;
+    overflow: hidden;
+    page-break-after: always;
+    text-align: left;
+}
+.cover div, .cover img { position: absolute; }
+
+.cover-opleiding { left: 40mm; top: 82.4mm; font-size: 11pt; font-weight: 700; }
+.cover-titel {
+    left: 40mm; top: 95.2mm; width: 135mm;
+    font-size: 43.5pt; line-height: 1.04; color: var(--blauw);
+}
+.cover-auteur { left: 45.2mm; top: 181.2mm; font-size: 11pt; }
+.cover-departement {
+    left: 28mm; top: 260.3mm; font-size: 8pt; font-weight: 700; line-height: 1.45;
+}
+.cover-opleidingsvoet { left: 77.8mm; top: 261.1mm; font-size: 8pt; line-height: 1.45; }
+.cover-logo { left: 153.4mm; top: 260.4mm; width: 31.7mm; }
+
+/* ----------------------------------------------------------- inhoudstafel */
+
+.inhoud-titel {
+    font-size: 26pt; font-weight: 700; text-align: left;
+    margin: 16.7mm 0 3.8mm 0;
+}
+.toc { width: 100%; border-collapse: collapse; font-size: 11pt; }
+.toc td {
+    border: 0; padding: 0; height: 6.65mm;
+    vertical-align: bottom; text-align: left; background: none;
+}
+.toc .pg { text-align: right; white-space: nowrap; }
+.toc .nr { display: inline-block; }
+.toc .n1 { font-weight: 700; }
+.toc .n1 .nr { width: 7.2mm; }
+.toc .n2 td:first-child { padding-left: 3.1mm; }
+.toc .n2 .nr { width: 11.5mm; }
+.toc .n3 td:first-child { padding-left: 6.8mm; }
+.toc .n3 .nr { width: 15.7mm; }

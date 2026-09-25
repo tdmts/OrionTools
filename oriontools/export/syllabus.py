@@ -58,7 +58,7 @@ import tempfile
 from collections import namedtuple
 from pathlib import Path
 
-from .. import repo
+from .. import huisstijl, repo
 # zoek_chrome, druk_af en stempelletters blijven ook namen van deze module:
 # de handout leende ze hier toen de twee nog scripts naast elkaar waren.
 from ..chrome import zoek_chrome
@@ -526,14 +526,15 @@ def zonder_oplossingen(fragment):
 # --------------------------------------------------------------- de bundel
 
 # Er staat hier geen opmaak. Alles wat zegt hoe het document eruitziet, staat in
-# <syllabus_dir>/syllabus.css, en dat bestand wordt hieronder gelinkt met een
-# absolute file:-URL, zodat de url()'s erin (de icoontjes van de kaders) tegen
-# de repo oplossen en niet tegen de tijdelijke map waar de bundel staat.
+# oriontools/export/stijl/syllabus.css (zie oriontools/huisstijl.py), en dat
+# bestand wordt hieronder gelinkt met een absolute file:-URL, zodat de url()'s
+# erin (de icoontjes van de kaders, die ernaast staan) tegen die map oplossen en
+# niet tegen de tijdelijke map waar de bundel staat.
 #
 # OrionCSS wordt hier NIET geladen. Dat is de huisstijl van de site; dit is een
 # document met de huisstijl van HOGENT, en twee stylesheets over elkaar zouden
 # betekenen dat je bij elke afwijking moet raden welke van de twee wint.
-STIJLBLAD = None       # paths.syllabus_dir / syllabus.css, gezet door main()
+STIJLBLAD = None       # huisstijl.syllabus_css(), gezet door main()
 
 BUNDEL = """<!DOCTYPE html>
 <html lang="nl">
@@ -791,7 +792,7 @@ def main(argv=None):
     MANIFEST = REPO / instelling["manifest"]
     MODULE = instelling["manifest_key"] or "syllabus"
     BRON = vak.pad("syllabus_src")
-    STIJLBLAD = vak.pad("syllabus_dir") / "syllabus.css"
+    STIJLBLAD = huisstijl.syllabus_css()
     LOGO = REPO / instelling["logo"] if instelling["logo"] else None
     TITEL = vak.titel
     COVER = instelling["cover"]
@@ -808,7 +809,7 @@ def main(argv=None):
         # Zonder stylesheet drukt Chrome de bundel gewoon af met de standaard
         # browseropmaak. Dat levert een PDF op die er alleen maar armzalig
         # uitziet en verder nergens over klaagt.
-        sys.exit(f"{STIJLBLAD.relative_to(REPO)} ontbreekt; zonder dat bestand "
+        sys.exit(f"{STIJLBLAD} ontbreekt; zonder dat bestand "
                  "heeft de PDF geen enkele opmaak.")
 
     module = lees_module()

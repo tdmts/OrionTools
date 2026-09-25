@@ -4,6 +4,7 @@ import os
 import re
 from pathlib import Path
 
+from ... import huisstijl
 from ..regel import Regel
 from ._gedeeld import (document_re, heeft_syllabus, heeft_vragen, lijstitems,
                        syllabus_paginas, top_lijsten, vragen, vragen_paginas)
@@ -144,11 +145,12 @@ class SyllabusVerouderd(Regel):
     draaien, verandert dus niets aan wat hij leest. Op het scherm klopt alles,
     en niets anders zou het merken.
 
-    syllabus.css (in paths.syllabus_dir) telt mee als bron. Het is de enige
-    plaats waar staat wat het gedrukte blad met een pagina doet, en de exporteur
-    linkt het; een marge daar verzetten verandert de PDF net zo goed als een zin
-    op een pagina. Op het scherm zie je er niets van, want daar laden
-    diezelfde pagina's OrionCSS.
+    syllabus.css telt mee als bron. Het is de enige plaats waar staat wat het
+    gedrukte blad met een pagina doet, en de exporteur linkt het; een marge daar
+    verzetten verandert de PDF net zo goed als een zin op een pagina. Op het
+    scherm zie je er niets van, want daar laden diezelfde pagina's OrionCSS. Het
+    staat in OrionTools (zie oriontools/huisstijl.py), dus een git pull daar kan
+    de syllabus van elk vak verouderen, en dat klopt.
 
     De afbeeldingen tellen bewust niet mee, anders dan bij handout-stale. De
     grens ligt bij de prijs en niet bij het principe: een handout drukt in
@@ -177,7 +179,7 @@ class SyllabusVerouderd(Regel):
         if not pdf.exists():
             ctx.fout(pdf, "bestaat niet; draai python ../OrionTools/orion.py export-syllabus")
             return
-        stijl = ctx.vak.pad("syllabus_dir") / "syllabus.css"
+        stijl = huisstijl.syllabus_css()
         bronnen = syllabus_paginas(ctx) + ([stijl] if stijl.exists() else [])
         stempel = ctx.tijd(pdf)
         for bron in sorted(bronnen):

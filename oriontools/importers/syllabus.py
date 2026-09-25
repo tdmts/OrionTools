@@ -644,7 +644,7 @@ def tabel_html(tabel, ctx):
         binnen = cel_html(inhoud_cel, ctx, ontvet=ontvet)
         klasse = "tip" if "vragen" in titel.lower() else "remark"
         # data-kader zegt WELK kader dit is. Op de site tekent OrionCSS het via
-        # de info-title-klasse; in de PDF hangt Theorie/Syllabus/syllabus.css er
+        # de info-title-klasse; in de PDF hangt export/stijl/syllabus.css er
         # de kleur en het icoon van HOGENT aan, en die horen bij het soort kader
         # en niet bij de OrionCSS-klasse.
         soort = slug(titel)

@@ -6,18 +6,22 @@ PDF = "downloads/T-handout-sessie-1.pdf"
 
 def deck(body=""):
     return ('<!DOCTYPE html>\n<html lang="nl">\n<head>\n'
-            '<link rel="stylesheet" href="hoorcollege.css">\n</head>\n<body>\n'
+            '<link rel="stylesheet" href="https://tdmts.github.io/OrionCSS/hoorcollege.css">\n'
+            '</head>\n<body>\n'
             f'<section class="slide"><h2>Slide</h2>{body}</section>\n</body>\n</html>\n')
 
 
 def bestanden(**extra):
     return {DECK: deck('<img src="../img/fig.svg" alt="">'), "img/fig.svg": "<svg/>",
-            "Hoorcollege/hoorcollege.css": "", "Hoorcollege/handout.css": "", PDF: b"%PDF", **extra}
+            PDF: b"%PDF", **extra}
 
 
 class HandoutVerouderd(RegelTest):
     regel = "handout-stale"
     config = {"handout": {"prefix": "T-handout-"}}
+
+    def setUp(self):
+        self.huisstijl()
 
     def test_goed_pdf_nieuwer_dan_alles(self):
         self.assertSchoon(bestanden(), mtimes={PDF: 10})
@@ -32,8 +36,17 @@ class HandoutVerouderd(RegelTest):
                          mtimes={DECK: 10})
 
     def test_fout_stijlblad_nieuwer(self):
-        self.assertMeldt(bestanden(), (PDF, "ouder dan Hoorcollege/handout.css"),
-                         mtimes={"Hoorcollege/handout.css": 10})
+        # Ze staan buiten het vak, in OrionTools en in OrionCSS.
+        for naam in ("handout.css", "hoorcollege.css"):
+            with self.subTest(naam):
+                self.huisstijl({naam: 20})
+                self.assertMeldt(bestanden(), (PDF, f"/{naam}; draai"), mtimes={PDF: 10})
+
+    def test_goed_stijlblad_ontbreekt(self):
+        # Zonder checkout van OrionCSS naast OrionTools is er niets om mee te
+        # vergelijken; de export zegt dan zelf dat het bestand ontbreekt.
+        self.huisstijl()["hoorcollege.css"].unlink()
+        self.assertSchoon(bestanden(), mtimes={PDF: 10})
 
     def test_fout_figuur_nieuwer_een_keer(self):
         # Een melding per handout, ook als meer bronnen nieuwer zijn.

@@ -18,7 +18,7 @@ class OrionCssWiring(Regel):
     Een pagina uit exempt_pages valt erbuiten, en zo ook de html in een map uit
     non_site_dirs. Een deck onder Hoorcollege/ is een document, geen pagina: het
     staat in geen Orion-menu, de student ziet er alleen de handout-PDF van, en
-    het laadt zijn eigen stylesheet in plaats van OrionCSS, want twee
+    het laadt hoorcollege.css van OrionCSS in plaats van style.css, want twee
     stylesheets over elkaar is bij elk verschil gokken wie wint.
     """
 

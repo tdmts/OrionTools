@@ -32,8 +32,10 @@ oriontools/
     repo.py              which course repo: --repo, else the git root of cwd; demands oriontools.json
     config.py            oriontools.json: defaults, merge, validation
     chrome.py            the one list of places a headless Chrome or Edge lives
+    huisstijl.py         where the stylesheets of the exports live, here and in OrionCSS
     check/               the content check: runner, rules/, audit, fix
     export/              syllabus, handout, verslag, oplossing, pdf
+    export/stijl/        syllabus.css and handout.css, shared by every course
     importers/           brightspace, syllabus, slides
 tests/                   a fixture per rule, and check --fix; `python -m unittest` from this root
 SCHRIJFSTIJL.md          the shared prose style; each course's own SCHRIJFSTIJL.md only adds to it

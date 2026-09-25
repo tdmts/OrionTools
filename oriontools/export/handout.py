@@ -13,7 +13,9 @@ blad begint met course.title.
 HET IS DEZELFDE SLIDE, ALLEEN KLEINER. De bundel laadt hoorcollege.css (wat een
 slide van binnen is) en legt daar handout.css bovenop (wat het blad ermee doet).
 Er wordt hier dus niets hertekend en er staat hier geen opmaak; staat er iets
-niet goed op papier, dan hoort dat in handout.css opgelost te worden.
+niet goed op papier, dan hoort dat in handout.css opgelost te worden. Waar die
+twee staan, en waarom hoorcollege.css uit de checkout van OrionCSS komt, zegt
+oriontools/huisstijl.py.
 
 Een gang door Chrome volstaat. De syllabus heeft er drie nodig omdat haar
 inhoudstafel paginanummers draagt die pas na het drukken bekend zijn; een
@@ -37,7 +39,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from .. import repo
+from .. import huisstijl, repo
 from ..chrome import zoek_chrome
 from . import pdfhulp
 
@@ -81,7 +83,7 @@ def absolute_paden(fragment, map_van_deck):
     return re.sub(r'(src|href)="([^"]+)"', vervang, fragment)
 
 
-def bouw_bundel(slides, titel, map_van_deck):
+def bouw_bundel(slides, titel):
     # Vijf vakken van 9mm, elk met een lijn eronder, zodat de onderste gelijk
     # valt met de onderkant van de slide. Met zes wordt het 7.5mm en dat is krap
     # om met de hand in te schrijven. Als elementen, want een verloop wordt bij
@@ -100,8 +102,8 @@ def bouw_bundel(slides, titel, map_van_deck):
         rijen.append(f'<div class="rij"><div class="nr">{nr}</div>'
                      f'<div class="kader">{slide}</div>{ruimte}</div>')
     css = "\n".join(
-        f'<link rel="stylesheet" href="{(map_van_deck / naam).as_uri()}">'
-        for naam in ("hoorcollege.css", "handout.css"))
+        f'<link rel="stylesheet" href="{stijl.as_uri()}">'
+        for stijl in (huisstijl.hoorcollege_css(), huisstijl.handout_css()))
     return ("<!DOCTYPE html>\n"
             '<html lang="nl">\n<head>\n<meta charset="utf-8">\n'
             f"<title>{html.escape(titel)}</title>\n{css}\n</head>\n"
@@ -181,7 +183,14 @@ def main(argv):
     if not slides:
         sys.exit(f"{deck.relative_to(wortel)} bevat geen enkele slide")
 
-    bundel = absolute_paden(bouw_bundel(slides, titel, decks), decks)
+    for stijl in (huisstijl.hoorcollege_css(), huisstijl.handout_css()):
+        if not stijl.exists():
+            # Zonder stijlblad drukt Chrome gewoon af, in de standaardopmaak
+            # van de browser, en klaagt nergens over.
+            sys.exit(f"{stijl} ontbreekt; zonder dat bestand heeft de handout "
+                     "geen opmaak (zie oriontools/huisstijl.py)")
+
+    bundel = absolute_paden(bouw_bundel(slides, titel), decks)
     werkmap = Path(tempfile.mkdtemp(prefix="handout-"))
     bundel_pad = werkmap / "handout.html"
     bundel_pad.write_text(bundel, encoding="utf-8")

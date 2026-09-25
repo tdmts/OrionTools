@@ -1,0 +1,136 @@
+/*
+ * handout.css -- het blad dat de student meebrengt naar de les.
+ *
+ * Wordt door orion.py export-handout bovenop hoorcollege.css gelegd. Alles
+ * wat een slide van binnen is, staat daar; hier staat alleen wat het blad
+ * ermee doet. Zo kan de handout niet uit de pas lopen met wat je projecteert:
+ * het is dezelfde slide, verkleind.
+ *
+ * hoorcollege.css staat in OrionCSS, want een deck in de cursus laadt het. Dit
+ * bestand staat in OrionTools, want alleen de export leest het. Beide golden
+ * eerst alleen voor DeN/Hoorcollege/; nu voor elk vak met decks.
+ *
+ * DE HELFT VAN HET BLAD IS OM IN TE SCHRIJVEN. Dat is waar de handout voor
+ * dient, dus de slide krijgt 80mm en de student 95mm ernaast. Een kleinere
+ * slide is de prijs, en die is klein: 80mm is nog altijd breder dan wat
+ * PowerPoint bij drie per blad overhoudt, want daar gaat een derde van de
+ * bladhoogte naar wit tussen de slides.
+ *
+ * VIJF SLIDES PER BLAD. Een slide van 80mm is 45mm hoog, dus vier laten er
+ * 70mm wit tussen staan en dat is precies waar de PowerPoint-handout op
+ * afgerekend werd. De tekst loopt van 14 tot 281mm, dus 267mm hoog, en vijf
+ * rijen van 52mm zijn samen 260mm. Die 7mm speling is er met opzet: staat een
+ * rij op een haar na niet meer op het blad, dan schuift break-inside ze in haar
+ * geheel door en houdt het blad er maar vier.
+ *
+ * DE MARGE LINKS IS SMAL, want daar staat alleen het slidenummer en dat is
+ * vijf millimeter breed. Elke millimeter die daar weggaat, komt bij de
+ * schrijfruimte.
+ *
+ * DE SCHRIJFLIJNEN ZIJN ELEMENTEN, GEEN VERLOOP. Ze waren een
+ * repeating-linear-gradient, wat in de browser klopt en in een PDF-lezer een
+ * roze vlak opleverde: zo'n verloop wordt bij het drukken een patroon en niet
+ * elke lezer tekent dat. Randen zijn lijnen en blijven lijnen.
+ *
+ * De slide is 80mm breed, dus --schaal is 80/254. Dat is de enige plaats waar
+ * dat getal staat; verander het en de rest schaalt mee.
+ */
+
+@page { size: A4; margin: 14mm 12mm 16mm 10mm; }
+
+html, body {
+    height: auto;
+    background: #fff;
+    overflow: visible;
+}
+
+body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* ------------------------------------------------------------------- rij */
+
+.rij {
+    display: flex;
+    align-items: flex-start;
+    height: 45.04mm;            /* 80mm op 16:9 */
+    margin-bottom: 7mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+/* Het slidenummer, in de marge naast het kader. Zo kan je in de les naar een
+   slide verwijzen en vindt de student ze op zijn blad terug. */
+.rij .nr {
+    flex: 0 0 5mm;
+    padding: 0.5mm 1.5mm 0 0;
+    text-align: right;
+    font-size: 8pt;
+    color: #9A9A9A;
+}
+
+.kader {
+    position: relative;
+    flex: 0 0 80mm;
+    height: 100%;
+    overflow: hidden;
+    border: 0.25mm solid #C8C8C8;
+    background: #fff;
+}
+
+/* ---------------------------------------------------------- schrijfruimte */
+
+.ruimte {
+    flex: 1;
+    height: 100%;
+    margin-left: 6mm;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Vijf vakken, vijf lijnen: de onderste valt gelijk met de onderkant van het
+   kader ernaast, zodat de schrijfruimte een blok is en niet ergens ophoudt. */
+.ruimte i {
+    flex: 1;
+    border-bottom: 0.2mm solid #D2D2D2;
+}
+
+/* --------------------------------------------------------------- de slide */
+
+/* Alles hierboven staat in millimeter, dus de slide hoeft alleen verkleind te
+   worden. Ze blijft daarbij gewoon in de stroom staan: een transform verandert
+   niets aan de ruimte die een element inneemt, dus ze meet binnen het kader nog
+   altijd 254 bij 143mm, en overflow: hidden knipt weg wat naast de 80 bij 45mm
+   valt die ze op papier inneemt.
+
+   ZE MAG GEEN position: absolute KRIJGEN, hoe vanzelfsprekend dat hier ook
+   lijkt. Chrome laat een absoluut geplaatst element vallen zodra het document
+   over meerdere bladen breekt: van elk blad verdween de inhoud van de onderste
+   slide, beeld en tekst samen, en bleef alleen het lege kader met het nummer
+   ernaast staan. Dat is een vijfde van de handout, en er ging niets stuk om het
+   aan te zien. Een deck dat op een blad past, drukt wel correct af, en dat is
+   precies wat het bij het uitproberen verbergt. */
+.kader .slide {
+    display: flex;
+    position: static;
+    transform: scale(0.315);
+    transform-origin: top left;
+}
+
+.slide .teller, .notities { display: none; }
+
+/* Het slidenummer dat hoorcollege.css in de onderrand van de slide zet, gaat
+   hier uit. Niet omdat het overbodig is maar omdat het hier onleesbaar wordt:
+   de slide gaat naar 80mm en negen punt wordt dan tweeeneenhalf. Hetzelfde
+   nummer staat op dit blad in de marge naast het kader, op ware grootte. */
+.slide::after { content: none; }
+
+/* De peiling kan niet mee naar papier: een iframe naar app.wooclap.com drukt
+   af als een leeg vlak, en een peiling waar niemand op kan antwoorden is er
+   geen. Wat op het scherm wegvalt omdat Wooclap het zelf tekent, is hier dus
+   het enige wat er staat: de titel en de vraag komen terug en de slide krijgt
+   haar gewone marge weer. Het antwoord hoort in de schrijfruimte ernaast. */
+.slide .wooclap { display: none; }
+.slide.peiling { padding: var(--marge); }
+.slide.peiling > h2, .slide.peiling > .vraag { display: block; }

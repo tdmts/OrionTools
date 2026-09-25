@@ -91,7 +91,7 @@ from io import BytesIO
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from .. import repo
+from .. import huisstijl, repo
 
 # Gezet door main(), uit de config van het vak: waar de decks en de
 # afbeeldingen staan, en hoe het deck naar die afbeeldingen verwijst.
@@ -748,12 +748,13 @@ def main(argv):
         '<html lang="nl">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>{html.escape(args.naam)}</title>\n"
-        '<link rel="stylesheet" href="hoorcollege.css">\n'
+        f'<link rel="stylesheet" href="{huisstijl.ORIONCSS_URL}hoorcollege.css">\n'
         f'</head>\n<body style="--slide-breedte: {breed:.0f}mm; '
         f'--slide-hoogte: {hoog:.0f}mm; '
         f"--sessie: '{sessie}'\">\n\n"
         + "\n\n".join(secties)
-        + '\n\n<script src="hoorcollege.js"></script>\n</body>\n</html>\n',
+        + f'\n\n<script src="{huisstijl.ORIONCSS_URL}hoorcollege.js"></script>\n'
+        "</body>\n</html>\n",
         encoding="utf-8")
 
     schrijf_import_md(args.naam, pptx, len(secties), len(namen))

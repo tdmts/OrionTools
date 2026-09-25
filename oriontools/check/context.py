@@ -9,6 +9,7 @@ gelezen en git ls-files een keer gedraaid, en regels vragen het aan de context.
 import os
 import subprocess
 from functools import cached_property
+from pathlib import Path
 
 ORION_CSS = "https://tdmts.github.io/OrionCSS/style.css"
 ORION_JS = "https://tdmts.github.io/OrionCSS/main.js"
@@ -51,10 +52,21 @@ class Context:
                                           ernst, regelnr))
 
     def _rel(self, pad):
+        """Een pad zoals de melding het toont: relatief aan de root van het vak.
+
+        Ook een bestand buiten het vak, zoals een stijlblad in OrionTools of
+        OrionCSS (oriontools/huisstijl.py): ../OrionTools/... zegt waar het staat
+        in de vorm waarin de melding ook het commando noemt.
+        """
         try:
             return pad.relative_to(self.root).as_posix()
-        except (AttributeError, ValueError):
+        except AttributeError:
             return str(pad)
+        except ValueError:
+            try:
+                return Path(os.path.relpath(pad, self.root)).as_posix()
+            except ValueError:      # een andere schijf onder Windows
+                return str(pad)
 
     # ----------------------------------------------------------- bestanden
 

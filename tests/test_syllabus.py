@@ -4,7 +4,6 @@ SRC = "Theorie/Syllabus/Theorie/"
 OVZ = SRC + "Inleiding/Overzicht.html"
 TJ = SRC + "Inleiding/TestJezelf.html"
 PDF = "downloads/T-syllabus.pdf"
-CSS = "Theorie/Syllabus/syllabus.css"
 
 
 def manifest(*topics, sleutel="syllabus"):
@@ -80,14 +79,19 @@ class SyllabusVerouderd(RegelTest):
     regel = "syllabus-stale"
     config = {"syllabus": {"pdf": "T-syllabus.pdf"}}
 
+    def setUp(self):
+        self.huisstijl()
+
     def test_goed_pdf_nieuwer(self):
-        self.assertSchoon({OVZ: pagina(), CSS: "", PDF: b"%PDF"}, mtimes={PDF: 10})
+        self.assertSchoon({OVZ: pagina(), PDF: b"%PDF"}, mtimes={PDF: 10})
 
     def test_fout_pagina_of_css_nieuwer(self):
-        self.assertMeldt({OVZ: pagina(), CSS: "", PDF: b"%PDF"},
+        self.assertMeldt({OVZ: pagina(), PDF: b"%PDF"},
                          (PDF, "ouder dan " + OVZ), mtimes={OVZ: 10})
-        self.assertMeldt({OVZ: pagina(), CSS: "", PDF: b"%PDF"},
-                         (PDF, "ouder dan " + CSS), mtimes={CSS: 10})
+        # syllabus.css staat in OrionTools en niet in het vak.
+        self.huisstijl({"syllabus.css": 20})
+        self.assertMeldt({OVZ: pagina(), PDF: b"%PDF"},
+                         (PDF, "/stijl/syllabus.css; draai"), mtimes={PDF: 10})
 
     def test_fout_pdf_ontbreekt_of_niet_ingesteld(self):
         self.assertMeldt({OVZ: pagina()}, (PDF, "bestaat niet"))
@@ -183,7 +187,8 @@ class WeesAfbeelding(RegelTest):
         self.assertSchoon({"img/syllabus-01.png": b"png", "img/syllabus-02.png": b"png",
                            "img/syllabus-logo.png": b"png", "img/los.png": b"png",
                            OVZ: pagina('<img src="../../../../img/syllabus-01.png" alt="">'),
-                           CSS: ".kader { background: url(../../img/syllabus-02.png); }"})
+                           "Theorie/Syllabus/extra.css":
+                               ".kader { background: url(../../img/syllabus-02.png); }"})
 
     def test_fout_niet_gebruikt(self):
         self.assertMeldt({"img/syllabus-01.png": b"png", OVZ: pagina(),

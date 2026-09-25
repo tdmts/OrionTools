@@ -18,7 +18,8 @@ Wie wil nakijken dat een regel niet van toepassing is, gebruikt toestand().
 
 Elk bestand krijgt dezelfde vaste mtime, zodat een verouderingsregel niet
 afhangt van de volgorde waarin de test schrijft; mtimes={pad: seconden} zet er
-een voor of achter. Met git=True wordt de map een repo en is alles gestaged
+een voor of achter. De gedeelde stijlbladen van de exports staan buiten het
+vak; huisstijl() legt ze voor een test in een tijdelijke map. Met git=True wordt de map een repo en is alles gestaged
 behalve wat in ongetrackt staat; er wordt niets gecommit, want git ls-files
 ziet de index en een commit vraagt een identiteit.
 
@@ -32,7 +33,9 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from oriontools import huisstijl as _huisstijl
 from oriontools.check import runner
 from oriontools.check.context import ORION_CSS, ORION_JS, Context
 from oriontools.check.regel import REGISTER
@@ -79,6 +82,31 @@ class RegelTest(unittest.TestCase):
 
     regel = ""
     config = {}
+
+    def huisstijl(self, mtimes=None):
+        """syllabus.css, handout.css en hoorcollege.css in een tijdelijke map, op T0.
+
+        Die drie staan buiten het vak (zie oriontools/huisstijl.py), en de echte
+        dragen de mtime van de laatste checkout: tegen T0 zijn ze altijd nieuwer,
+        en elke verouderingsregel zou dan melden. mtimes={naam: seconden} zoals
+        bij vak(). Geeft {naam: pad} terug.
+        """
+        tmp = tempfile.TemporaryDirectory(prefix="huisstijl-", ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        stijl, orioncss = Path(tmp.name) / "stijl", Path(tmp.name) / "OrionCSS"
+        for patch in (mock.patch.object(_huisstijl, "STIJL", stijl),
+                      mock.patch.object(_huisstijl, "ORIONCSS", orioncss)):
+            patch.start()
+            self.addCleanup(patch.stop)
+        paden = {"syllabus.css": _huisstijl.syllabus_css(),
+                 "handout.css": _huisstijl.handout_css(),
+                 "hoorcollege.css": _huisstijl.hoorcollege_css()}
+        for naam, pad in paden.items():
+            pad.parent.mkdir(parents=True, exist_ok=True)
+            pad.write_text("", encoding="utf-8")
+            t = T0 + (mtimes or {}).get(naam, 0)
+            os.utime(pad, (t, t))
+        return paden
 
     def vak(self, bestanden, config=None, git=False, ongetrackt=(), mtimes=None):
         tmp = tempfile.TemporaryDirectory(prefix="minivak-", ignore_cleanup_errors=True)

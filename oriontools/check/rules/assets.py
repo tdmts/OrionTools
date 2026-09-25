@@ -119,7 +119,7 @@ class VreemdeAssets(Regel):
     liet alleen ../ en ./ door en ving zo ook een los "script.js" naast de
     pagina; dat was geen vreemde asset maar een toevallige vorm van het patroon.
 
-    Alleen sitepagina's: een deck laadt zijn eigen hoorcollege.css, en een
+    Alleen sitepagina's: een deck laadt hoorcollege.css en geen style.css, en een
     pagina uit exempt_pages (pasteInOrion.html) is geen pagina van de cursus.
     """
 
