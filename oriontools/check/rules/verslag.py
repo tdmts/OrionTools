@@ -97,8 +97,10 @@ class VerslagMarkup(Regel):
       alleen onder paths.labo: een verslag bestaat alleen waar een
       Opdracht.html staat. In de syllabus betekent class="vragen" iets anders,
       een vragenlijst die juist wel op het scherm hoort, met haar antwoord
-      eronder. Twee mechanismen, hetzelfde woord, en dit is de plaats waar dat
-      verschil uitgesproken wordt;
+      eronder, en een labo-zelftest (TestJezelf.html) is diezelfde soort lijst.
+      Een vragenlijst telt hier dus alleen op een Opdracht.html; elders kijkt
+      vragen-answered of ze haar antwoorden draagt. Twee mechanismen, hetzelfde
+      woord, en dit is de plaats waar dat verschil uitgesproken wordt;
     - een verslagblok waar geen vragenlijst of kader in staat, want dat levert
       niets op in het sjabloon;
     - een invultabel (verslag-tabel) met een scheve rij: evenveel cellen per rij
@@ -118,12 +120,14 @@ class VerslagMarkup(Regel):
 
     def controleer(self, ctx):
         labo = ctx.config["paths"]["labo"]
+        opdrachten = set(opdracht_paginas(ctx))
         for pad in ctx.html:
             tekst = ctx.tekst(pad)
             if onafgesloten_commentaren(tekst):
                 continue
             if labo in pad.relative_to(ctx.root).parts:
-                m = VERSLAG_MARKUP_RE.search(COMMENTAAR_RE.sub("", tekst))
+                m = next((m for m in VERSLAG_MARKUP_RE.finditer(COMMENTAAR_RE.sub("", tekst))
+                          if pad in opdrachten or m.group(1).lower() != "vragen"), None)
                 if m:
                     ctx.fout(pad, f"'{m.group(1)}' staat buiten een <!-- verslag --> blok, "
                                   "dus de student ziet de vragen zonder plaats om te antwoorden")

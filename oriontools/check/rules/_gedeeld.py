@@ -134,7 +134,7 @@ def heeft_opdracht(ctx):
     return True if opdracht_paginas(ctx) else "geen Opdracht.html"
 
 
-# ------------------------------------------------ vragenlijsten (syllabus)
+# ------------------------------------------------ vragenlijsten
 
 def lijstitems(fragment, tag):
     """De <li> op het eerste niveau van de eerste <tag>, als (openingstag, inhoud).
@@ -209,3 +209,28 @@ def vragen(fragment):
     return [(begin + i, tag, inhoud)
             for begin, items, _, _ in top_lijsten(fragment)
             for i, (tag, inhoud) in enumerate(items)]
+
+
+def vragen_paginas(ctx):
+    """(pagina, tekst) voor elke pagina met een vragenlijst, in de syllabus en daarbuiten.
+
+    Een labo-zelftest (Labo/<Naam>/Theorie/TestJezelf.html) is dezelfde soort
+    vragenlijst als een syllabuspagina, en main.js bouwt er het antwoord uit
+    op de site. Een vraag zonder li.juist krijgt daar stil geen antwoord.
+
+    De tekst is zonder commentaar: in het verslagblok van een Opdracht.html
+    betekent class="vragen" een vraag die de student in de docx beantwoordt,
+    en daar hoort geen antwoord bij (zie verslag-markup).
+    """
+    if "_vragen" not in ctx.__dict__:
+        uit = []
+        for pad in sorted(set(ctx.paginas) | set(syllabus_paginas(ctx))):
+            tekst = COMMENTAAR_RE.sub("", ctx.tekst(pad))
+            if top_lijsten(tekst):
+                uit.append((pad, tekst))
+        ctx._vragen = uit
+    return ctx._vragen
+
+
+def heeft_vragen(ctx):
+    return True if vragen_paginas(ctx) else 'geen <ol class="vragen">'

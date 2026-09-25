@@ -5,8 +5,8 @@ import re
 from pathlib import Path
 
 from ..regel import Regel
-from ._gedeeld import (document_re, heeft_syllabus, lijstitems, syllabus_paginas,
-                       top_lijsten, vragen)
+from ._gedeeld import (document_re, heeft_syllabus, heeft_vragen, lijstitems,
+                       syllabus_paginas, top_lijsten, vragen, vragen_paginas)
 
 # Een leeg manifest en een kapot manifest zien er voor de parser hetzelfde uit:
 # allebei nul modules. Ze betekenen niet hetzelfde; zie SyllabusManifest.
@@ -188,7 +188,7 @@ class SyllabusVerouderd(Regel):
 
 
 class VragenBeantwoord(Regel):
-    """Elke vraag in de syllabus draagt haar antwoord.
+    """Elke vraag draagt haar antwoord, in de syllabus en in een labo-zelftest.
 
     Een vragenlijst is een <ol class="vragen">. Een meerkeuzevraag duidt precies
     een mogelijkheid aan met class="juist"; een open vraag draagt
@@ -201,36 +201,40 @@ class VragenBeantwoord(Regel):
 
     Het gaat over elke pagina en niet alleen over TestJezelf.html: een oefening
     halverwege een hoofdstuk stelt dezelfde soort vraag, en toen de regel op de
-    bestandsnaam keek, keek ze daar langs.
+    bestandsnaam keek, keek ze daar langs. Om dezelfde reden kijkt ze ook buiten
+    de syllabus, naar de zelftests onder Labo/.
 
     De export is alles of niets: ontbreekt er een antwoord, dan drukt ze voor dat
     hoofdstuk helemaal geen oplossingen, want een lijst waar vraag 3 uit
     weggevallen is laat de student denken dat hij vraag 3 goed heeft. Dat is de
     juiste keuze en tegelijk een stille: op het scherm is er niets aan te zien,
     en in de uitvoer van de export is het een regel "let op" tussen de andere.
-    Vandaar deze regel, die het meldt voor er gedrukt wordt.
+    Op de site is het net zo stil: main.js slaat een vraag zonder li.juist over,
+    en bij twee neemt het de eerste. Vandaar deze regel, die het meldt voor er
+    gedrukt of gesynct wordt.
     """
 
     id = "vragen-answered"
     legacy = ("DeN:14", "ICEES:14")
 
     def van_toepassing(self, ctx):
-        return heeft_syllabus(ctx)
+        return heeft_vragen(ctx)
 
     def controleer(self, ctx):
-        for pagina in syllabus_paginas(ctx):
-            for nummer, _, inhoud in vragen(ctx.tekst(pagina)):
+        syllabus = set(syllabus_paginas(ctx))
+        for pagina, tekst in vragen_paginas(ctx):
+            gevolg = ("drukt de export voor dit hoofdstuk geen oplossingen" if pagina in syllabus
+                      else "toont main.js bij deze vraag geen of een fout antwoord")
+            for nummer, _, inhoud in vragen(tekst):
                 keuzes = lijstitems(inhoud, "ul")
                 if keuzes:
                     juist = [tag for tag, _ in keuzes if re.search(r'class="[^"]*\bjuist\b', tag)]
                     if len(juist) != 1:
                         ctx.fout(pagina, f"vraag {nummer} heeft {len(juist)} mogelijkheden met "
-                                         'class="juist"; het moeten er precies een zijn, anders '
-                                         "drukt de export voor dit hoofdstuk geen oplossingen")
+                                         f'class="juist"; het moeten er precies een zijn, anders {gevolg}')
                 elif not re.search(r'<div class="oplossing">\s*\S', inhoud):
                     ctx.fout(pagina, f"vraag {nummer} is een open vraag zonder "
-                                     '<div class="oplossing">; zonder dat antwoord drukt de '
-                                     "export voor dit hoofdstuk geen oplossingen")
+                                     f'<div class="oplossing">; zonder dat antwoord {gevolg}')
 
 
 class VragenNummering(Regel):
@@ -246,18 +250,19 @@ class VragenNummering(Regel):
 
     Er wordt gekeken of het attribuut gedeclareerd is, niet naar het
     samengeregen nummer: dat valt bij gebrek aan een attribuut terug op de
-    verwachte waarde en is dan altijd gelijk. Een melding per pagina.
+    verwachte waarde en is dan altijd gelijk. Een melding per pagina, op elke
+    pagina met een vragenlijst, zoals vragen-answered.
     """
 
     id = "vragen-numbering"
     legacy = ("DeN:14", "ICEES:14")
 
     def van_toepassing(self, ctx):
-        return heeft_syllabus(ctx)
+        return heeft_vragen(ctx)
 
     def controleer(self, ctx):
-        for pagina in syllabus_paginas(ctx):
-            for begin, items, gedeclareerd, verwacht in top_lijsten(ctx.tekst(pagina)):
+        for pagina, tekst in vragen_paginas(ctx):
+            for begin, items, gedeclareerd, verwacht in top_lijsten(tekst):
                 if not items:
                     continue
                 if gedeclareerd:
