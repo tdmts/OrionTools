@@ -71,7 +71,7 @@ from urllib.parse import unquote, urlparse
 from xml.etree import ElementTree
 
 from .. import repo
-from ..check.rules._gedeeld import COMMENTAAR_RE, lijstitems, vragen
+from ..check.rules._gedeeld import COMMENTAAR_RE, lijstitems, top_lijsten, vragen
 
 OPLOSSING_RE = re.compile(r'<div class="oplossing">(.*?)</div>', re.S)
 JUIST_RE = re.compile(r'class="[^"]*\bjuist\b')
@@ -415,6 +415,46 @@ def paginatitel(tekst, standaard):
     return html.unescape(re.sub(r"<[^>]+>|\s+", " ", m.group(1))).strip() if m else standaard
 
 
+KOP_RE = re.compile(r"<(h[23])\b[^>]*>(.*?)</\1>", re.S)
+
+
+def groepen(tekst):
+    """{vraagnummer: kop} voor elke vraag die onder een h2 (en eventueel een h3) staat.
+
+    ANS toont een vragenbank als een lijst titels, en een toets trekt daar per
+    groep vragen uit. Een pagina die haar vragen onder koppen groepeert (per
+    doelstelling, per soort), geeft die groep zo mee in de titel van elk item:
+    wie de bank inricht, ziet welke vragen varianten van elkaar zijn. Een h3
+    telt alleen onder de h2 waar ze bij hoort.
+    """
+    tekst = COMMENTAAR_RE.sub("", tekst)
+    koppen = [(m.start(), m.group(1), " ".join(html.unescape(re.sub(r"<[^>]+>", " ", m.group(2))).split()))
+              for m in KOP_RE.finditer(tekst)]
+    # dezelfde lijsten als top_lijsten, in dezelfde volgorde, maar met hun plaats
+    begins, diepte = [], 0
+    for m in re.finditer(r"<(/?)(ul|ol)\b([^>]*)>", tekst):
+        if m.group(1) == "/":
+            diepte = max(0, diepte - 1)
+            continue
+        if diepte == 0 and m.group(2) == "ol" and re.search(r'class="[^"]*\bvragen\b', m.group(3)):
+            begins.append(m.start())
+        diepte += 1
+    uit = {}
+    for plaats, (begin, items, _, _) in zip(begins, top_lijsten(tekst)):
+        h2 = h3 = None
+        for pos, niveau, kop in koppen:
+            if pos > plaats:
+                break
+            if niveau == "h2":
+                h2, h3 = kop, None
+            else:
+                h3 = kop
+        groep = " / ".join(k for k in (h2, h3) if k)
+        if groep:
+            uit.update({nummer: groep for nummer in range(begin, begin + len(items))})
+    return uit
+
+
 def naam_van(pagina, root, toetsmap):
     """Het pad met streepjes, zonder .html en zonder de toetsmap ervoor."""
     try:
@@ -456,6 +496,7 @@ def bouw(pagina, root, naam, schudden, feedback):
         raise Fout(f'{pagina.name}: geen meerkeuzevraag in een <ol class="vragen">')
 
     titel = paginatitel(tekst, pagina.stem)
+    groep = groepen(tekst)
     pakket = identifier(naam)
     uit, resources = {}, []
     for vraag in lijst:
@@ -465,7 +506,9 @@ def bouw(pagina, root, naam, schudden, feedback):
             if schudden and VERWIJZEND_RE.search(inhoud):
                 meldingen.append(f"vraag {nummer}: een mogelijkheid verwijst naar de andere, "
                                  "en de volgorde wordt geschud")
-        xml = item(item_id, f"{titel} - vraag {nummer}", vraag, schudden, feedback, uitgepakt)
+        # Twee cijfers, zodat een lijst op titel vraag 10 niet voor vraag 2 zet.
+        deel = [titel, groep[nummer]] if nummer in groep else [titel]
+        xml = item(item_id, " - ".join([*deel, f"vraag {nummer:02d}"]), vraag, schudden, feedback, uitgepakt)
         welgevormd(xml, f"vraag {nummer}")
         gebruikt = sorted({html.unescape(s) for s in re.findall(r'<img\b[^>]*\bsrc="([^"]+)"', xml)})
         uit[f"{item_id}.xml"] = xml.encode("utf-8")

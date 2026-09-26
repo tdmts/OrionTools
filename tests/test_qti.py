@@ -61,6 +61,21 @@ class ExportQti(unittest.TestCase):
         self.assertEqual([k.text for k in keuzes], ["1", "2", "3"])
         self.assertNotIn("juist", ElementTree.tostring(item, encoding="unicode"))
 
+    def test_goed_kop_van_de_groep_in_de_titel(self):
+        v = vraag("Welke laag?", "1", "2", juist=1)
+        self.schrijf("_toets/Toets.html", pagina(v).replace(
+            '<ol class="vragen">', '<h2>D1 Lagen</h2>\n<h3>Varianten</h3>\n<ol class="vragen">'
+            + v + '</ol>\n<h2>D2 Adressen</h2>\n<ol class="vragen" start="3">'))
+        self.export("_toets/Toets.html")
+        z = self.zip()
+        self.assertEqual(self.item(z, 1).get("title"), "Netwerklaag - D1 Lagen / Varianten - vraag 01")
+        self.assertEqual(self.item(z, 3).get("title"), "Netwerklaag - D2 Adressen - vraag 03")
+
+    def test_goed_zonder_kop_alleen_het_nummer(self):
+        self.schrijf("_toets/Toets.html", pagina(vraag("Welke laag?", "1", "2", juist=1)))
+        self.export("_toets/Toets.html")
+        self.assertEqual(self.item(self.zip()).get("title"), "Netwerklaag - vraag 01")
+
     def test_goed_attributen_in_kebab_case(self):
         # QTI 3 schrijft base-type; baseType is QTI 2 en hoort er niet in.
         self.schrijf("_toets/Toets.html", pagina(vraag("V?", "a", "b")))
