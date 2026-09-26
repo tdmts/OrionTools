@@ -1,4 +1,4 @@
-"""export-qti: een vragenpagina als QTI 3.0-zip voor ANS."""
+"""export-qti: een vragenpagina als QTI 2.1-zip voor ANS."""
 
 import contextlib
 import io
@@ -12,7 +12,7 @@ from xml.etree import ElementTree
 
 from oriontools.export import qti
 
-QTI = "{http://www.imsglobal.org/xsd/imsqtiasi_v3p0}"
+QTI = "{http://www.imsglobal.org/xsd/imsqti_v2p1}"
 
 
 def vraag(stam, *keuzes, juist=0, oplossing="Omdat."):
@@ -56,8 +56,8 @@ class ExportQti(unittest.TestCase):
         self.schrijf("_toets/Toets.html", pagina(vraag("Welke laag?", "1", "2", "3", juist=2)))
         self.export("_toets/Toets.html")
         item = self.item(self.zip())
-        self.assertEqual(item.find(f".//{QTI}qti-correct-response/{QTI}qti-value").text, "C")
-        keuzes = item.findall(f".//{QTI}qti-simple-choice")
+        self.assertEqual(item.find(f".//{QTI}correctResponse/{QTI}value").text, "C")
+        keuzes = item.findall(f".//{QTI}simpleChoice")
         self.assertEqual([k.text for k in keuzes], ["1", "2", "3"])
         self.assertNotIn("juist", ElementTree.tostring(item, encoding="unicode"))
 
@@ -76,14 +76,14 @@ class ExportQti(unittest.TestCase):
         self.export("_toets/Toets.html")
         self.assertEqual(self.item(self.zip()).get("title"), "Netwerklaag - vraag 01")
 
-    def test_goed_attributen_in_kebab_case(self):
-        # QTI 3 schrijft base-type; baseType is QTI 2 en hoort er niet in.
+    def test_goed_punt_op_normalmaximum(self):
+        # ANS haalt het punt uit normalMaximum, en alleen in QTI 2.x; in 3.0 werd het 0.
         self.schrijf("_toets/Toets.html", pagina(vraag("V?", "a", "b")))
         self.export("_toets/Toets.html")
-        xml = self.zip().read("T-Toets-01.xml").decode()
-        self.assertIn('base-type="identifier"', xml)
-        self.assertIn('normal-maximum="1"', xml)
-        self.assertNotIn("baseType", xml)
+        item = self.item(self.zip())
+        score = next(o for o in item.findall(f"{QTI}outcomeDeclaration") if o.get("identifier") == "SCORE")
+        self.assertEqual(score.get("normalMaximum"), "1")
+        self.assertNotIn("normal-maximum", self.zip().read("T-Toets-01.xml").decode())
 
     def test_goed_manifest_in_de_root(self):
         self.schrijf("_toets/Toets.html", pagina(vraag("V?", "a", "b"), vraag("W?", "c", "d")))
@@ -92,7 +92,7 @@ class ExportQti(unittest.TestCase):
         self.assertEqual(sorted(z.namelist()), ["T-Toets-01.xml", "T-Toets-02.xml", "imsmanifest.xml"])
         manifest = z.read("imsmanifest.xml").decode()
         self.assertIn('identifier="T-Toets-package"', manifest)
-        self.assertIn("<string language=\"nl\">Netwerklaag</string>", manifest)
+        self.assertIn('type="imsqti_item_xmlv2p1"', manifest)
 
     def test_goed_zonder_feedback_geen_uitleg(self):
         self.schrijf("_toets/Toets.html", pagina(vraag("V?", "a", "b", oplossing="Geheim")))
@@ -106,7 +106,7 @@ class ExportQti(unittest.TestCase):
                      pagina(vraag("V?", "a", "b", oplossing='Zie <a href="X.html">de theorie</a>.')))
         self.export("_toets/Toets.html", "--feedback")
         item = self.item(self.zip())
-        feedback = item.find(f"{QTI}qti-modal-feedback")
+        feedback = item.find(f"{QTI}modalFeedback")
         self.assertEqual(ElementTree.tostring(feedback, encoding="unicode", method="text").strip(),
                          "Zie de theorie.")
         self.assertIsNone(item.find(f".//{QTI}a"))
@@ -130,6 +130,10 @@ class ExportQti(unittest.TestCase):
         self.assertNotIn("img/elders.svg", z.namelist())
         self.assertIn('<file href="img/fig.svg"/>', z.read("imsmanifest.xml").decode())
         self.assertIn('<img src="img/fig.svg" alt="x"/>', z.read("T-Toets-01.xml").decode())
+        # QTI 2.1 kent geen <figure>: het wordt een <div>.
+        xml = z.read("T-Toets-01.xml").decode()
+        self.assertNotIn("<figure", xml)
+        self.assertIn('<div><img src="img/fig.svg" alt="x"/></div>', xml)
 
     def test_goed_codeblok_blijft_letterlijk(self):
         code = "interface vlan 10\n  ip address 10.0.0.1 255.0.0.0"

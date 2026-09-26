@@ -1,11 +1,11 @@
-"""Maak van een vragenpagina een QTI 3.0-pakket (zip) voor de toetsomgeving ANS.
+"""Maak van een vragenpagina een QTI 2.1-pakket (zip) voor de toetsomgeving ANS.
 
     python ../OrionTools/orion.py export-qti _toets/Netwerklaag.html
     python ../OrionTools/orion.py export-qti Labo/RS485/Theorie/TestJezelf.html --feedback
 
 De zip komt in paths.toets (standaard _toets/), genoemd naar het pad van de
 pagina met streepjes, zoals export-verslag: Labo-RS485-Theorie-TestJezelf-qti.zip.
-Importeren in ANS: School, Question banks, Settings, Import, QTI 3.0.
+Importeren in ANS: School, Question banks, Settings, Import, QTI 2.1.
 
 DE BRON IS DE VRAGENLIJST, NIET EEN TWEEDE FORMAAT
 --------------------------------------------------
@@ -39,11 +39,24 @@ HET PAKKET
 De vorm is die van het script waarmee een collega al in de praktijk naar ANS
 importeert: imsmanifest.xml en een item-XML per vraag in de root van de zip,
 geen submap, en response processing met de standaardsjabloon match_correct.
-Wat daarvan veranderd is, staat bij de code: de attributen in kebab-case zoals
-QTI 3 ze schrijft (base-type, niet baseType), identifiers die per vak en per
+Wat daarvan veranderd is, staat bij de code: identifiers die per vak en per
 toets uniek zijn zodat twee toetsen in een vragenbank elkaar niet raken, en de
 zip rechtstreeks geschreven, zodat een item van een vorige run er niet in
 achterblijft.
+
+WAAROM QTI 2.1 EN NIET 3.0
+--------------------------
+Tot 26 september 2026 schreef dit script QTI 3.0, en ANS importeerde elk item
+met 0 punten. ANS haalt de punten van een vraag uit het attribuut
+normalMaximum op de outcome SCORE, en dat leest het alleen in een pakket van
+QTI 2.x; ANS exporteert zelf ook enkel QTI 2.x. In de import van QTI 3.0 bleef
+het op 0, en dat is diezelfde dag in ANS nagekeken met vijf proefitems:
+de sjabloon met een outcome MAXSCORE erbij, de verwerking uitgeschreven, die
+twee samen, normal-maximum met normalMaximum ernaast, en normalMaximum alleen.
+Hetzelfde item als QTI 2.1 kreeg zijn punten, met de sjabloon en met de
+uitgeschreven verwerking, en een normalMaximum van 2 gaf 2 punten, dus ANS
+leest de waarde en valt niet terug op een standaard. Ga dus niet terug naar
+QTI 3.0 zonder die proef opnieuw te doen.
 
 Een figuur (<img src> relatief) gaat mee in de zip, onder zijn pad in het vak,
 en staat in het manifest bij het item dat hem gebruikt. Een codeblok blijft
@@ -52,11 +65,13 @@ naartoe wees.
 
 IN ANS NAGEKEKEN
 ---------------
-Wat het script van de collega niet deed en hier bijkwam, is op 25 september
-2026 in ANS geimporteerd met de Test jezelf van labo RS485: de feedback
-(qti-modal-feedback met een uitgeschreven response processing) verschijnt bij
-het item, en een svg-figuur uit de zip wordt getoond. Een png of jpeg volgt
-hetzelfde pad in de zip en het manifest, maar is daar niet apart geprobeerd.
+Op 25 september 2026 is in QTI 3.0 de Test jezelf van labo RS485 in ANS
+geimporteerd: de feedback verscheen bij het item en een svg-figuur uit de zip
+werd getoond. Op 26 september 2026 volgden 41 items met png-figuren, en daar
+bleken de punten op 0 te staan (zie hierboven). In QTI 2.1 is op die dag
+alleen nagekeken dat een item zijn punten krijgt; de feedback (modalFeedback)
+en de figuren volgen in 2.1 hetzelfde pad, maar kijk ze na bij de eerste
+import die ze gebruikt.
 """
 
 import argparse
@@ -82,12 +97,15 @@ VERWIJZEND_RE = re.compile(r"\b(alle|geen van (de )?)\s*(bovenstaande|vorige|voo
 
 # ------------------------------------------------------ HTML naar QTI-XHTML
 
-# Wat QTI 3 in een itembody toelaat en wij gebruiken. Een andere tag wordt
+# Wat QTI in een itembody toelaat en wij gebruiken. Een andere tag wordt
 # uitgepakt: zijn inhoud blijft, de tag zelf niet.
 BLOK = {"p", "div", "pre", "ul", "ol", "li", "table", "thead", "tbody", "tfoot", "tr",
-        "th", "td", "caption", "figure", "figcaption", "blockquote", "h3", "h4", "h5", "h6"}
-INLINE = {"strong", "em", "b", "i", "u", "sub", "sup", "code", "kbd", "span", "br", "img",
+        "th", "td", "caption", "blockquote", "h3", "h4", "h5", "h6"}
+INLINE = {"strong", "em", "b", "i", "sub", "sup", "code", "kbd", "span", "br", "img",
           "small", "q", "abbr"}
+# HTML5 dat QTI 2.1 niet kent maar een gelijkwaardige tag voor heeft; de rest
+# van wat 2.1 niet kent (<u> bijvoorbeeld) wordt uitgepakt.
+HERNOEMD = {"figure": "div", "figcaption": "p"}
 LEEG = {"br", "img", "hr", "wbr"}
 WEG = {"script", "style", "hr"}
 ATTRIBUTEN = {"img": {"src", "alt", "width", "height"}, "td": {"colspan", "rowspan"},
@@ -110,6 +128,7 @@ class _Lezer(HTMLParser):
         self.uitgepakt = uitgepakt
 
     def handle_starttag(self, tag, attrs):
+        tag = HERNOEMD.get(tag, tag)
         if tag in WEG:
             self.weg += tag not in LEEG
             return
@@ -130,6 +149,7 @@ class _Lezer(HTMLParser):
             self.stapel.pop()
 
     def handle_endtag(self, tag):
+        tag = HERNOEMD.get(tag, tag)
         if tag in WEG:
             self.weg = max(0, self.weg - (tag not in LEEG))
             return
@@ -288,93 +308,92 @@ def identifier(s):
     return s if s[:1].isalpha() else f"q-{s}"
 
 
+# Het punt van een item staat op normalMaximum van SCORE: dat is wat ANS leest.
+# MAXSCORE staat erbij omdat de vorm die in ANS nagekeken is, het droeg.
 ITEM = """<?xml version="1.0" encoding="UTF-8"?>
-<qti-assessment-item
-  xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+<assessmentItem
+  xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqtiasi_v3p0 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0p1_v1p0.xsd"
+  xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqti_v2p1 http://www.imsglobal.org/xsd/qti/qtiv2p1/imsqti_v2p1p2.xsd"
   identifier="{id}"
   title="{titel}"
   adaptive="false"
-  time-dependent="false"
+  timeDependent="false"
   xml:lang="nl">
 
-  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
-    <qti-correct-response>
-      <qti-value>{juist}</qti-value>
-    </qti-correct-response>
-  </qti-response-declaration>
+  <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="identifier">
+    <correctResponse>
+      <value>{juist}</value>
+    </correctResponse>
+  </responseDeclaration>
 
-  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" normal-maximum="1">
-    <qti-default-value>
-      <qti-value>0</qti-value>
-    </qti-default-value>
-  </qti-outcome-declaration>
+  <outcomeDeclaration identifier="SCORE" cardinality="single" baseType="float" normalMaximum="1">
+    <defaultValue>
+      <value>0</value>
+    </defaultValue>
+  </outcomeDeclaration>
+  <outcomeDeclaration identifier="MAXSCORE" cardinality="single" baseType="float">
+    <defaultValue>
+      <value>1</value>
+    </defaultValue>
+  </outcomeDeclaration>
 {feedbackdeclaratie}
-  <qti-item-body>
+  <itemBody>
 {stam}
-    <qti-choice-interaction response-identifier="RESPONSE" shuffle="{schudden}" max-choices="1">
+    <choiceInteraction responseIdentifier="RESPONSE" shuffle="{schudden}" maxChoices="1">
 {keuzes}
-    </qti-choice-interaction>
-  </qti-item-body>
+    </choiceInteraction>
+  </itemBody>
 
 {verwerking}
 {feedback}
-</qti-assessment-item>
+</assessmentItem>
 """
 
-VERWERKING = ('  <qti-response-processing '
-              'template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>')
+VERWERKING = ('  <responseProcessing '
+              'template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct"/>')
 
 # Met feedback kan de sjabloon niet: die zet alleen SCORE. Dit is match_correct
 # uitgeschreven, plus een FEEDBACK die altijd de uitleg toont.
-FEEDBACKDECLARATIE = """
-  <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier"/>
+FEEDBACKDECLARATIE = """  <outcomeDeclaration identifier="FEEDBACK" cardinality="single" baseType="identifier"/>
 """
 
-VERWERKING_MET_FEEDBACK = """  <qti-response-processing>
-    <qti-response-condition>
-      <qti-response-if>
-        <qti-match>
-          <qti-variable identifier="RESPONSE"/>
-          <qti-correct identifier="RESPONSE"/>
-        </qti-match>
-        <qti-set-outcome-value identifier="SCORE">
-          <qti-base-value base-type="float">1</qti-base-value>
-        </qti-set-outcome-value>
-      </qti-response-if>
-      <qti-response-else>
-        <qti-set-outcome-value identifier="SCORE">
-          <qti-base-value base-type="float">0</qti-base-value>
-        </qti-set-outcome-value>
-      </qti-response-else>
-    </qti-response-condition>
-    <qti-set-outcome-value identifier="FEEDBACK">
-      <qti-base-value base-type="identifier">UITLEG</qti-base-value>
-    </qti-set-outcome-value>
-  </qti-response-processing>"""
+VERWERKING_MET_FEEDBACK = """  <responseProcessing>
+    <responseCondition>
+      <responseIf>
+        <match>
+          <variable identifier="RESPONSE"/>
+          <correct identifier="RESPONSE"/>
+        </match>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">1</baseValue>
+        </setOutcomeValue>
+      </responseIf>
+      <responseElse>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">0</baseValue>
+        </setOutcomeValue>
+      </responseElse>
+    </responseCondition>
+    <setOutcomeValue identifier="FEEDBACK">
+      <baseValue baseType="identifier">UITLEG</baseValue>
+    </setOutcomeValue>
+  </responseProcessing>"""
 
 FEEDBACK = """
-  <qti-modal-feedback outcome-identifier="FEEDBACK" identifier="UITLEG" show-hide="show">
-    <qti-content-body>
+  <modalFeedback outcomeIdentifier="FEEDBACK" identifier="UITLEG" showHide="show">
 {uitleg}
-    </qti-content-body>
-  </qti-modal-feedback>"""
+  </modalFeedback>"""
 
 MANIFEST = """<?xml version="1.0" encoding="UTF-8"?>
-<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1"
+<manifest xmlns="http://www.imsglobal.org/xsd/imscp_v1p1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   identifier="{id}"
-  xsi:schemaLocation="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_imscpv1p2_v1p0.xsd">
+  xsi:schemaLocation="http://www.imsglobal.org/xsd/imscp_v1p1 http://www.imsglobal.org/xsd/qti/qtiv2p1/qtiv2p1_imscpv1p2_v1p0.xsd">
 
   <metadata>
-    <schema>QTI Package</schema>
-    <schemaversion>3.0.0</schemaversion>
-    <lom xmlns="http://ltsc.ieee.org/xsd/LOM">
-      <general>
-        <title><string language="nl">{titel}</string></title>
-      </general>
-    </lom>
+    <schema>QTIv2.1 Package</schema>
+    <schemaversion>1.0.0</schemaversion>
   </metadata>
 
   <organizations/>
@@ -391,7 +410,7 @@ def item(item_id, titel, vraag, schudden, feedback, uitgepakt):
     _, stam, keuzes, oplossing = vraag
     letters = [chr(ord("A") + i) for i in range(len(keuzes))]
     juist = next(l for l, (_, j) in zip(letters, keuzes) if j)
-    regels = [f'      <qti-simple-choice identifier="{l}">{als_inline(k, uitgepakt)}</qti-simple-choice>'
+    regels = [f'      <simpleChoice identifier="{l}">{als_inline(k, uitgepakt)}</simpleChoice>'
               for l, (k, _) in zip(letters, keuzes)]
     met = feedback and als_blokken(oplossing, uitgepakt)
     return ITEM.format(
@@ -406,7 +425,7 @@ def item(item_id, titel, vraag, schudden, feedback, uitgepakt):
 
 def resource(item_id, bestand, figuren_):
     files = "\n".join(f'      <file href="{html.escape(p)}"/>' for p in [bestand, *figuren_])
-    return (f'    <resource identifier="{item_id}" type="imsqti_item_xmlv3p0" href="{bestand}">\n'
+    return (f'    <resource identifier="{item_id}" type="imsqti_item_xmlv2p1" href="{bestand}">\n'
             f"{files}\n    </resource>")
 
 
@@ -570,7 +589,7 @@ def main(argv=None):
     print("feedback: " + ("de uitleg gaat mee" if args.feedback else "geen"))
     for m in meldingen:
         print(f"  let op: {m}")
-    print("Importeer in ANS: School > Question banks > Settings > Import > QTI 3.0")
+    print("Importeer in ANS: School > Question banks > Settings > Import > QTI 2.1")
     return 0
 
 

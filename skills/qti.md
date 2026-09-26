@@ -102,4 +102,4 @@ python ../OrionTools/orion.py export-qti <question page of the course> --feedbac
 page to fix, then export again; the zip is derived and is never edited.
 
 Report the zip path, the number of questions, whether feedback went in, and where to import:
-ANS, School, Question banks, Settings, Import, QTI 3.0.
+ANS, School, Question banks, Settings, Import, QTI 2.1. Not 3.0: ANS reads the points of an item only from a QTI 2.x package, and imports a 3.0 item at 0 points.
