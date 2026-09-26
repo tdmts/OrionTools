@@ -32,7 +32,8 @@ thin for the number asked for, say so instead of padding.
 A question page of the course already covers the same ground (a Test jezelf, the study questions
 of a chapter). Students have seen those, so for a summative test, do not reuse or lightly rephrase
 them unless the user asks you to. To export an existing page as a practice test, skip to step 5
-and point `export-qti` at that page.
+and point `export-qti` at that page. That works only for a page in `ol.vragen` markup; the course
+skill says which pages are, and a course whose questions sit in other markup has none.
 
 ## 3. Write the page
 
@@ -41,8 +42,9 @@ is ignored by git and skipped by the check, and it must stay that way: everythin
 mirrored into the course, where every student reads it. `export-qti` refuses to write while git
 does not ignore it. Never move a test out of that folder and never commit it.
 
-Copy the `<head>` of an existing question page, so the page loads OrionCSS and the reveal works in
-the browser. The `<h1>` is the title of the package in ANS. Then one `<ol class="vragen">`:
+Copy the `<head>` of an existing page of the course, so the page loads OrionCSS and the reveal works
+in the browser. The reveal is OrionCSS `main.js`, so it works in a course that has no question page
+of its own as well. The `<h1>` is the title of the package in ANS. Then one `<ol class="vragen">`:
 
 ```html
 <li>Stem, as a question or an incomplete sentence.
@@ -57,8 +59,8 @@ the browser. The `<h1>` is the title of the package in ANS. Then one `<ol class=
 </li>
 ```
 
-The markup is the course's own (see the course's `CLAUDE.md` on `ol.vragen`). What makes a good
-item:
+The markup is OrionCSS's question list, block *Vragenlijst* in `../OrionContent/template.html`,
+whatever the course's own pages use for their answers. What makes a good item:
 
 - **Exactly one `class="juist"`.** A question with more than one right answer is rewritten, not
   marked twice: pair the options so one pairing is right and say how many there are, or invert
@@ -92,7 +94,7 @@ the recommended option. Corrections go into the page, never into the zip.
 ```
 python ../OrionTools/orion.py export-qti _toets/<Name>.html              # summative
 python ../OrionTools/orion.py export-qti _toets/<Name>.html --feedback   # practice
-python ../OrionTools/orion.py export-qti Labo/<Lab>/Theorie/TestJezelf.html --feedback
+python ../OrionTools/orion.py export-qti <question page of the course> --feedback
 ```
 
 `--niet-schudden` keeps the options in page order; use it only when the order carries meaning
