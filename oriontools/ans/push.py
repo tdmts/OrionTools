@@ -52,8 +52,10 @@ de Test jezelf van labo RS485:
 Daarom trasht dit commando eerst elk item waarvan de external_id niet meer
 klopt, en importeert dan het hele pakket: wat nog klopt, slaat ANS over.
 Mislukt de import halverwege, dan ontbreken er items en zet de volgende push
-ze erin. Een item dat in een toets zit (assignment_ids), vervangt het niet:
-trashen haalt het uit die toets, en dat beslist de docent, niet een push. Een
+ze erin. Een item dat in een itembanktoets zit (assignment_ids, zie ans-toets),
+vervangt het niet: trashen haalt het uit die itembanktoets, en dat beslist de
+docent, niet een push. Een toets in een cursus raakt het niet, die heeft een
+kopie. Een
 item waarvan de vraag van de pagina verdween, blijft staan en wordt gemeld,
 om dezelfde reden.
 
@@ -261,12 +263,12 @@ def main(argv=None):
         return 0
 
     try:
-        # Een item in een toets vervangen, haalt het uit die toets. Dat beslist
+        # Een item in een itembanktoets vervangen, haalt het eruit. Dat beslist
         # niet dit commando: het stopt voor het iets schrijft.
         in_toets = [e for e in gewijzigd
                     if client.haal(f"/question_bank_exercises/{e['id']}").get("assignment_ids")]
         if in_toets:
-            sys.exit("ans-push: niets verstuurd. Deze gewijzigde vragen zitten in een toets, en "
+            sys.exit("ans-push: niets verstuurd. Deze gewijzigde vragen zitten in een itembanktoets, en "
                      "vervangen haalt ze eruit: " + ", ".join(f"vraag {nummer(e['qti_identifier'])} "
                                                             f"(item {e['id']})" for e in in_toets))
         if not bank:

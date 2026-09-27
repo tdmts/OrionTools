@@ -276,6 +276,47 @@ class Toets(unittest.TestCase):
         with self.assertRaises(client.AnsFout):
             toets.zoek_toets(client.Client(GEHEIM, openen=net), 9, "E")
 
+    def test_fout_twee_itembanktoetsen_met_dezelfde_external_id(self):
+        net = Net(Antwoord([{"id": 1, "external_id": "E"}, {"id": 2, "external_id": "E"}], headers()))
+        with self.assertRaises(client.AnsFout) as ctx:
+            toets.zoek_itembanktoets(client.Client(GEHEIM, openen=net), 9, "E")
+        self.assertIn("itembanktoetsen", str(ctx.exception))
+        self.assertIn("/question_banks/9/question_bank_assignments", net.requests[0].full_url)
+
+
+class Vragen(unittest.TestCase):
+    ITEMS = [{"id": 10 + n, "qti_identifier": f"P-{n:02d}", "name": f"vraag {n}"} for n in (1, 2, 3, 10)]
+
+    def test_goed_items_in_de_volgorde_van_de_pagina(self):
+        doel = {"P-10": "x", "P-02": "x", "P-01": "x", "P-03": "x"}
+        bank = list(reversed(self.ITEMS)) + [{"id": 99, "qti_identifier": "Q-01"}]
+        self.assertEqual([e["id"] for e in toets.items_van_pagina(doel, bank)], [11, 12, 13, 20])
+
+    def test_goed_nieuwe_itembanktoets_krijgt_alles(self):
+        erbij, eruit, anders = toets.itembank_plan(None, self.ITEMS)
+        self.assertEqual((len(erbij), eruit, anders), (4, [], True))
+
+    def test_goed_gelijke_itembanktoets_verandert_niet(self):
+        self.assertEqual(toets.itembank_plan({"exercise_ids": [11, 12, 13, 20]}, self.ITEMS), ([], [], False))
+
+    def test_goed_itembanktoets_volgt_de_pagina_ook_als_er_een_uit_moet(self):
+        erbij, eruit, anders = toets.itembank_plan({"exercise_ids": [12, 11, 7, 13]}, self.ITEMS)
+        self.assertEqual(([e["id"] for e in erbij], eruit, anders), ([20], [7], True))
+        self.assertEqual(toets.itembank_plan({"exercise_ids": [12, 11, 13, 20]}, self.ITEMS), ([], [], True))
+
+    def test_goed_wacht_tot_de_kopie_er_is(self):
+        net = Net(Antwoord([], headers()),
+                  Antwoord([{"id": 2, "position": 2}, {"id": 1, "position": 1},
+                            {"id": 3, "position": 3, "trashed": True}, {"id": 4, "position": 3}], headers()))
+        gewacht = []
+        n = toets.wacht_op_vragen(client.Client(GEHEIM, openen=net), 5, 3, slapen=gewacht.append)
+        self.assertEqual((n, gewacht), (3, [push.WACHT]))
+
+    def test_fout_kopie_die_niet_komt(self):
+        net = Net(*[Antwoord([], headers()) for _ in range(toets.GEDULD // push.WACHT + 2)])
+        with self.assertRaises(client.AnsFout):
+            toets.wacht_op_vragen(client.Client(GEHEIM, openen=net), 5, 3, slapen=lambda s: None)
+
 
 if __name__ == "__main__":
     unittest.main()

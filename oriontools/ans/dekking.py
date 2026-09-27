@@ -179,18 +179,27 @@ def banken(client):
     return uit
 
 
+def stand(vak, pagina, rel, naam, bestaande):
+    """(vlaggen, doel, nieuw, gewijzigd, verweesd) van een pagina tegenover haar bank.
+
+    doel is {qti_identifier: external_id} met de vlaggen die het best kloppen.
+    Gooit qti.Fout als het pakket niet bouwt.
+    """
+    doelen = {v: push.doel_van(qti.bouw(pagina, vak.root, f"{vak.code}-{naam}", *v)[0], rel)
+              for v in VLAGGEN}
+    v = beste(doelen, bestaande)
+    return (v, doelen[v], *push.plan(doelen[v], bestaande, qti.identifier(f"{vak.code}-{naam}")))
+
+
 def verouderd(vak, pagina, rel, naam, bestaande):
     """De regels over een pagina in ANS: wat een push zou doen, en met welke vlaggen."""
     try:
-        doelen = {v: push.doel_van(qti.bouw(pagina, vak.root, f"{vak.code}-{naam}", *v)[0], rel)
-                  for v in VLAGGEN}
+        v, doel, nieuw, gewijzigd, verweesd = stand(vak, pagina, rel, naam, bestaande)
     except qti.Fout as e:
         return ["  het pakket bouwt niet, dus niets te vergelijken:",
                 *(f"    {r}" for r in str(e).splitlines())]
-    v = beste(doelen, bestaande)
-    nieuw, gewijzigd, verweesd = push.plan(doelen[v], bestaande, qti.identifier(f"{vak.code}-{naam}"))
     regel = (f"  vlaggen: {vlaggen(v)}; {len(nieuw)} nieuw, {len(gewijzigd)} gewijzigd, "
-             f"{len(doelen[v]) - len(nieuw) - len(gewijzigd)} ongewijzigd")
+             f"{len(doel) - len(nieuw) - len(gewijzigd)} ongewijzigd")
     uit = [regel]
     if gewijzigd:
         uit.append("  gewijzigd: vraag " + ", ".join(str(push.nummer(e["qti_identifier"])) for e in gewijzigd))

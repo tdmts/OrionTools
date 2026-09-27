@@ -1,6 +1,7 @@
 """Maak de toets van een labo aan in ANS, met de instellingen uit oriontools.json.
 
     python ../OrionTools/orion.py ans-toets Labo/RS485
+    python ../OrionTools/orion.py ans-toets Labo/RS485 --vragen _toets/LaboRS485.html
     python ../OrionTools/orion.py ans-toets Labo/RS485 --droog
 
 EEN TOETS PER MAP
@@ -47,21 +48,63 @@ vergelijkt daarom op waarde, niet op type.
 
 Een PATCH per record en per run: een voor de toets, een voor de cover. Dat
 blijft onder de vijf wijzigingen per minuut die ANS toelaat.
+
+DE VRAGEN: EEN KOPIE BIJ HET AANMAKEN
+-------------------------------------
+Op 27 september 2026 in ANS nagekeken, met twee proeftoetsen in de cursus en
+een itembanktoets in de bank van een labotoets, alles daarna getrasht:
+- assignment_ids van een bankitem wijst niet naar een toets in een cursus,
+  maar naar een itembanktoets (question bank assignment): een toets die in de
+  bank zelf staat. Met het id van een cursustoets geeft die PATCH een 404.
+- Een cursustoets krijgt vragen uit een bank enkel bij het aanmaken, met
+  question_bank_assignment_id op de POST. ANS kopieert dan de vragen van die
+  itembanktoets in de volgorde van haar exercise_ids, op de achtergrond en
+  zonder job in het antwoord: meteen na de POST had de toets nog geen vragen,
+  twee seconden later alle drie. Een kopie draagt de naam van het bankitem en
+  geen external_id, en de toets onthoudt niet uit welke itembanktoets ze komt.
+- Bij een PATCH op een bestaande toets doet ANS niets met dat veld, zoals de
+  swagger zegt.
+
+Daarom werkt --vragen in twee stappen. Eerst wordt een itembanktoets in de
+bank van de vragenpagina gelijk aan die pagina: precies haar vragen, in haar
+volgorde, ook als er daarvoor een uit moet. Ze heeft dezelfde external_id als
+de toets, zoals de itembanktoets die vroeger per labo met de hand gemaakt werd.
+Daarna komt de cursustoets uit die itembanktoets:
+- bestaat ze niet, dan wordt ze aangemaakt met question_bank_assignment_id;
+- is ze leeg, dan wordt ze getrasht en opnieuw aangemaakt, met dezelfde naam
+  en external_id maar een nieuw id. Een lege toets heeft geen resultaten, en
+  anders krijgt ze nooit vragen;
+- heeft ze vragen, dan blijven die, want vervangen neemt de resultaten mee.
+  Wijken hun namen af van de pagina, dan meldt dit commando dat.
+
+Een gevulde toets is dus een momentopname. Een vraag die daarna verandert,
+zet ans-push in de bank; in de toets pas je ze met de hand aan, of je trasht
+de toets en draait dit opnieuw, zolang niemand ze aflegde.
+
+De bank moet bij zijn. Is een vraag nieuw of gewijzigd tegenover de bank
+(zoals ans-dekking het ziet, met de vlaggen die het best kloppen), dan stopt
+dit commando voor het iets schrijft: anders kopieert de toets een oudere
+versie. Na het kopiëren leest het de toets opnieuw en zet het wat nog van de
+config verschilt, want of ANS instellingen van de itembanktoets overneemt, is
+niet nagekeken.
 """
 
 import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from .. import repo
 from ..export import qti
+from . import dekking, push
 from .client import AnsFout, Client
 from .push import menupad
 
 OBJECTEN = ("accessibility_settings", "grades_settings")
 VELDEN = ("assignment_type", "summative")
+GEDULD = 120
 
 
 def toets_id(vak, rel):
@@ -146,13 +189,56 @@ def plan(cfg, toets, cover):
     return body or None, cover_body, regels
 
 
+def enige(lijst, external_id, soort):
+    gevonden = [x for x in lijst if x.get("external_id") == external_id and not x.get("trashed")]
+    if len(gevonden) > 1:
+        raise AnsFout(f"{len(gevonden)} {soort} met external_id {external_id}: "
+                      + ", ".join(str(x["id"]) for x in gevonden) + ". Zet er een op trashed.")
+    return gevonden[0] if gevonden else None
+
+
 def zoek_toets(client, course_id, external_id):
-    toetsen = [t for t in client.alles(f"/courses/{course_id}/assignments")
-               if t.get("external_id") == external_id and not t.get("trashed")]
-    if len(toetsen) > 1:
-        raise AnsFout(f"{len(toetsen)} toetsen met external_id {external_id}: "
-                      + ", ".join(str(t["id"]) for t in toetsen) + ". Zet er een op trashed.")
-    return toetsen[0] if toetsen else None
+    return enige(client.alles(f"/courses/{course_id}/assignments"), external_id, "toetsen")
+
+
+def zoek_itembanktoets(client, bank_id, external_id):
+    return enige(client.alles(f"/question_banks/{bank_id}/question_bank_assignments"),
+                 external_id, "itembanktoetsen")
+
+
+def vragen_van(client, toets_id):
+    """De vragen van een cursustoets, in hun volgorde."""
+    return sorted((e for e in client.alles(f"/assignments/{toets_id}/exercises") if not e.get("trashed")),
+                  key=lambda e: e.get("position") or 0)
+
+
+def items_van_pagina(doel, bestaande):
+    """De bankitems van de vragen in doel, in de volgorde van de pagina."""
+    per_id = {e.get("qti_identifier"): e for e in bestaande}
+    return [per_id[q] for q in sorted(doel, key=push.nummer)]
+
+
+def itembank_plan(itembanktoets, items):
+    """(erbij, eruit, anders): de items die erbij komen, de ids die eruit gaan,
+    en of exercise_ids verandert, ook enkel in volgorde. None is een nieuwe."""
+    huidig = list((itembanktoets or {}).get("exercise_ids") or [])
+    gewenst = [e["id"] for e in items]
+    erbij = [e for e in items if e["id"] not in huidig]
+    eruit = [i for i in huidig if i not in gewenst]
+    return erbij, eruit, huidig != gewenst
+
+
+def wacht_op_vragen(client, toets_id, aantal, slapen=time.sleep):
+    """Het aantal vragen, zodra de kopie van ANS er allemaal zijn."""
+    gewacht = 0
+    while True:
+        n = len(vragen_van(client, toets_id))
+        if n >= aantal:
+            return n
+        if gewacht >= GEDULD:
+            raise AnsFout(f"toets {toets_id} heeft na {GEDULD} s {n} van de {aantal} vragen")
+        slapen(push.WACHT)
+        gewacht += push.WACHT
 
 
 def kort(waarde, lengte=60):
@@ -160,10 +246,40 @@ def kort(waarde, lengte=60):
     return tekst if len(tekst) <= lengte else tekst[:lengte - 3] + "..."
 
 
+def pad_van(vak, pad, soort):
+    """Een pad vanaf de werkmap of de root van het vak, als het daar bestaat."""
+    for kandidaat in (pad if pad.is_absolute() else Path.cwd() / pad, vak.root / pad):
+        kandidaat = kandidaat.resolve()
+        if kandidaat.is_dir() if soort == "map" else kandidaat.is_file():
+            return kandidaat
+    sys.exit(f"ans-toets: {pad} is geen {soort}")
+
+
+def lees_vragen(client, vak, pagina, ext):
+    """(rel, bank, items, itembanktoets) voor --vragen; stopt als de bank achterloopt."""
+    rel = pagina.relative_to(vak.root).as_posix()
+    naam = qti.naam_van(pagina, vak.root, vak.pad("toets"))
+    bank = push.zoek_bank(client, qti.identifier(f"{vak.code}-{naam}"))
+    if not bank:
+        sys.exit(f"ans-toets: {rel} heeft geen vragenbank in ANS; zet ze erin met ans-push {rel}")
+    bestaande = push.oefeningen(client, bank["id"])
+    try:
+        v, doel, nieuw, gewijzigd, _ = dekking.stand(vak, pagina, rel, naam, bestaande)
+    except qti.Fout as e:
+        sys.exit(f"ans-toets: {rel}: niets verstuurd\n{e}")
+    if nieuw or gewijzigd:
+        vlag = "" if v == dekking.VLAGGEN[0] else f" {dekking.vlaggen(v)}"
+        sys.exit(f"ans-toets: niets verstuurd. De bank loopt achter op {rel} ({len(nieuw)} nieuw, "
+                 f"{len(gewijzigd)} gewijzigd); eerst ans-push {rel}{vlag}")
+    return rel, bank, items_van_pagina(doel, bestaande), zoek_itembanktoets(client, bank["id"], ext)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="orion.py ans-toets", description=__doc__.split("\n")[0])
     repo.voeg_repo_toe(parser)
     parser.add_argument("map", type=Path, help="de map van het labo, bv. Labo/RS485")
+    parser.add_argument("--vragen", type=Path, metavar="PAGINA",
+                        help="de vragenpagina waarvan de toets de vragen krijgt, bv. _toets/LaboRS485.html")
     parser.add_argument("--droog", action="store_true", help="alleen lezen en tonen wat er zou gebeuren")
     args = parser.parse_args(argv)
     vak = repo.vind(args)
@@ -174,42 +290,97 @@ def main(argv=None):
     if not ans["course_id"]:
         sys.exit("ans-toets: ans.course_id staat niet in oriontools.json (zoek hem met ans-verken)")
     cfg = ans["toets"]
-    kaart = args.map if args.map.is_absolute() else (Path.cwd() / args.map)
-    if not kaart.is_dir():
-        kaart = vak.root / args.map
-    kaart = kaart.resolve()
-    if not kaart.is_dir():
-        sys.exit(f"ans-toets: {args.map} is geen map")
-    rel = kaart.relative_to(vak.root).as_posix()
+    rel = pad_van(vak, args.map, "map").relative_to(vak.root).as_posix()
+    pagina = pad_van(vak, args.vragen, "bestand") if args.vragen else None
     ext = toets_id(vak, rel)
+    naam = toetsnaam(vak, rel)
 
     try:
         client = Client()
         toets = zoek_toets(client, ans["course_id"], ext)
         cover = client.haal(f"/assignments/{toets['id']}/cover") if toets else None
+        if pagina:
+            vragen_rel, bank, items, ibt = lees_vragen(client, vak, pagina, ext)
+            in_toets = vragen_van(client, toets["id"]) if toets else []
     except AnsFout as e:
         sys.exit(f"ans-toets: {e}")
 
-    body, cover_body, regels = plan(cfg, toets or {}, cover or {})
+    ibt_anders = vervang = False
+    if pagina:
+        erbij, eruit, ibt_anders = itembank_plan(ibt, items)
+        vervang = bool(toets) and not in_toets
+        print(f"vragen: {vragen_rel}, bank {bank['id']} {bank['name']}, {len(items)} vragen")
+        if not ibt:
+            print(f"itembanktoets: nieuw, {naam} ({ext}) in bank {bank['id']}")
+        else:
+            print(f"itembanktoets: {ibt['id']} {ibt['name']}")
+            namen = {e["id"]: e.get("name") for e in ibt.get("exercises") or []}
+            if erbij:
+                print("  erbij: vraag " + ", ".join(str(push.nummer(e["qti_identifier"])) for e in erbij))
+            for i in eruit:
+                print(f"  eruit: item {i} ({namen.get(i, '?')})")
+            if ibt_anders and not (erbij or eruit):
+                print("  andere volgorde")
+            if not ibt_anders:
+                print("  gelijk aan de pagina")
+
+    if vervang:
+        # Een nieuwe toets: elk veld uit de config gaat mee.
+        body, cover_body, regels = plan(cfg, {}, {})
+    else:
+        body, cover_body, regels = plan(cfg, toets or {}, cover or {})
     if toets:
         print(f"toets: {toets['id']} {toets['name']} ({ext})")
     else:
-        naam = toetsnaam(vak, rel)
         print(f"toets: nieuw, {naam} ({ext}) in cursus {ans['course_id']}")
+    if pagina and not toets:
+        print(f"  met de {len(items)} vragen van de itembanktoets")
+    elif vervang:
+        print(f"  leeg: wordt getrasht en opnieuw aangemaakt met de {len(items)} vragen van de itembanktoets")
+    elif pagina:
+        print(f"  {len(in_toets)} vragen; ANS kopieert enkel bij het aanmaken, dus die blijven")
+        if [e.get("name") for e in in_toets] != [e.get("name") for e in items]:
+            print("  let op: de vragen in de toets zijn niet die van de pagina (aantal, volgorde of naam)")
     if toets and not regels:
-        print("  alles zoals in oriontools.json")
-        return 0
+        print("  instellingen zoals in oriontools.json")
     for veld, oud, nieuw in regels:
         print(f"  {veld}: {kort(oud)} -> {kort(nieuw)}")
-    if args.droog:
+    if args.droog or not (regels or not toets or vervang or (pagina and (not ibt or ibt_anders))):
         return 0
 
     try:
+        if pagina and (not ibt or ibt_anders):
+            gewenst = [e["id"] for e in items]
+            if not ibt:
+                ibt, _ = client.vraag("POST", f"/question_banks/{bank['id']}/question_bank_assignments",
+                                      body={"name": naam, "external_id": ext, "exercise_ids": gewenst})
+                print(f"  itembanktoets aangemaakt: {ibt['id']}")
+            else:
+                client.vraag("PATCH", f"/question_bank_assignments/{ibt['id']}",
+                             body={"name": ibt["name"], "exercise_ids": gewenst})
+            ibt = client.haal(f"/question_bank_assignments/{ibt['id']}")
+            if list(ibt.get("exercise_ids") or []) != gewenst:
+                sys.exit(f"ans-toets: itembanktoets {ibt['id']} heeft na het zetten niet de vragen "
+                         "van de pagina; de toets is niet aangeraakt")
+            print(f"  itembanktoets gelijk aan de pagina: {len(gewenst)} vragen")
+        if vervang:
+            client.vraag("PATCH", f"/assignments/{toets['id']}", body={"name": toets["name"], "trashed": True})
+            print(f"  lege toets {toets['id']} getrasht")
+            naam, toets = toets["name"], None
         if not toets:
+            extra = {"question_bank_assignment_id": ibt["id"]} if pagina else {}
             toets, _ = client.vraag("POST", f"/courses/{ans['course_id']}/assignments",
-                                    body={"name": naam, "external_id": ext, **(body or {})})
+                                    body={"name": naam, "external_id": ext, **extra, **(body or {})})
             print(f"  toets aangemaakt: {toets['id']}")
-        elif body:
+            if pagina:
+                n = wacht_op_vragen(client, toets["id"], len(items))
+                print(f"  {n} vragen gekopieerd uit de itembanktoets")
+            # Wat ANS bij het aanmaken anders zette of uit de itembanktoets
+            # overnam, zet de rest van deze run recht.
+            toets = client.haal(f"/assignments/{toets['id']}")
+            cover = client.haal(f"/assignments/{toets['id']}/cover")
+            body, cover_body, _ = plan(cfg, toets, cover)
+        if body:
             # name staat als verplicht in de swagger, ook bij een PATCH
             client.vraag("PATCH", f"/assignments/{toets['id']}", body={"name": toets["name"], **body})
         if cover_body:
