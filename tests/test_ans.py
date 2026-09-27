@@ -11,7 +11,8 @@ import urllib.parse
 import tempfile
 from pathlib import Path
 
-from oriontools.ans import client, push, verken
+from oriontools.ans import client, dekking, push, verken
+from oriontools.export import qti
 
 GEHEIM = "geheim-token-123"
 
@@ -144,6 +145,47 @@ class Push(unittest.TestCase):
         net = Net(Antwoord([{"id": 1, "external_id": "E"}, {"id": 2, "external_id": "E"}], headers()))
         with self.assertRaises(client.AnsFout):
             push.zoek_bank(client.Client(GEHEIM, openen=net), "E")
+
+
+VRAGEN = """<ol class="vragen">
+<li data-bron="Labo/A/Theorie/X.html Labo/A/Theorie/Y.html">Stam?<ul><li class="juist">a</li><li>b</li></ul></li>
+<li>Stam?<ul><li class="juist">a</li><li>b</li></ul>
+<div class="oplossing">Zie <a href="../Theorie/Z.html#kop" target="_blank">Z</a>,
+<a href="https://example.com/x.html">extern</a> en <a href="#boven">boven</a>.</div></li>
+<li>Open vraag.</li>
+</ol>"""
+
+
+class Dekking(unittest.TestCase):
+    def test_goed_bronnen_uit_data_bron(self):
+        self.assertEqual(qti.bronnen(VRAGEN), {1: ["Labo/A/Theorie/X.html", "Labo/A/Theorie/Y.html"]})
+
+    def test_fout_data_bron_die_niet_bestaat_stopt_de_export(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "Labo/A/Theorie").mkdir(parents=True)
+            (Path(d) / "Labo/A/Theorie/X.html").write_text("", encoding="utf-8")
+            with self.assertRaises(qti.Fout) as ctx:
+                qti.controleer_bronnen(VRAGEN, Path(d))
+            self.assertIn("Y.html", str(ctx.exception))
+            self.assertNotIn("X.html", str(ctx.exception))
+
+    def test_goed_verwijzingen_uit_data_bron_en_de_oplossing(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            pagina = root / "Labo/A/Toets/T.html"
+            self.assertEqual(dekking.verwijzingen(pagina, VRAGEN, root),
+                             {1: {"Labo/A/Theorie/X.html", "Labo/A/Theorie/Y.html"},
+                              2: {"Labo/A/Theorie/Z.html"}})
+
+    def test_goed_vlaggen_volgen_de_bank_en_anders_de_standaard(self):
+        geen, niet_schudden = dekking.VLAGGEN[0], dekking.VLAGGEN[1]
+        doelen = {v: {"P-01": f"p#1@{i}", "P-02": f"p#2@{i}"} for i, v in enumerate(dekking.VLAGGEN)}
+        bank = [{"qti_identifier": "P-01", "external_id": "p#1@1"},
+                {"qti_identifier": "P-02", "external_id": "p#2@1"}]
+        self.assertEqual(dekking.beste(doelen, bank), niet_schudden)
+        self.assertEqual(dekking.beste(doelen, []), geen)
+        self.assertEqual(dekking.vlaggen(geen), "geen")
+        self.assertEqual(dekking.vlaggen((False, True)), "--niet-schudden --feedback")
 
 
 if __name__ == "__main__":

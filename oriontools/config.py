@@ -122,6 +122,9 @@ STANDAARD = {
     # oriontools/ans/client.py.
     "ans": {
         "course_id": 0,
+        # fnmatch op het relatieve pad: de pagina's waarover ans-dekking een
+        # vraag in ANS verwacht. Leeg is geen dekking; een vragenpagina telt nooit.
+        "dekking": [],
     },
     "export_pdf": {
         "group": "module",     # lab of module

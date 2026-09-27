@@ -17,6 +17,12 @@ dan kan dezelfde vraag op twee plaatsen een ander juist antwoord hebben. Een
 toets die Claude schrijft, is dus een gewone vragenpagina in _toets/: je leest
 ze na in de browser, met de uitklap van main.js, en exporteert pas daarna.
 
+Een vraag in een toets zegt over welke theorie ze gaat met data-bron op haar
+<li>: een pad vanaf de root van het vak, meerdere gescheiden door een spatie
+(data-bron="Labo/RS485/Theorie/WatIsRS485.html"). ans-dekking leest het. Een
+pad dat niet bestaat, stopt de export: de check ziet het niet, want ze slaat
+paths.toets over, en in CI bestaat die map niet eens.
+
 Een vraag zonder <ul> is een open vraag en heeft in ANS geen meerkeuze-item;
 ze wordt overgeslagen en gemeld. Een meerkeuzevraag zonder of met twee juiste
 mogelijkheden stopt de export helemaal, zoals vragen-answered: een toets met
@@ -276,6 +282,27 @@ def lees_vragen(tekst, meldingen):
     return uit
 
 
+BRON_RE = re.compile(r'\bdata-bron="([^"]*)"')
+
+
+def bronnen(tekst):
+    """{vraagnummer: [pad]} uit data-bron op de <li> van elke vraag die er een heeft."""
+    uit = {}
+    for nummer, tag, _ in vragen(COMMENTAAR_RE.sub("", tekst)):
+        m = BRON_RE.search(tag)
+        if m and m.group(1).split():
+            uit[nummer] = [html.unescape(p) for p in m.group(1).split()]
+    return uit
+
+
+def controleer_bronnen(tekst, root):
+    fouten = [f"vraag {nummer}: data-bron {p} bestaat niet in het vak"
+              for nummer, paden in bronnen(tekst).items()
+              for p in paden if not (root / p).is_file()]
+    if fouten:
+        raise Fout("\n".join(fouten))
+
+
 # ------------------------------------------------------------ figuren
 
 IMG_RE = re.compile(r'(<img\b[^>]*?\bsrc=")([^"]+)(")')
@@ -517,6 +544,7 @@ def bouw(pagina, root, naam, schudden, feedback):
     """
     tekst = pagina.read_text(encoding="utf-8")
     meldingen, uitgepakt = [], set()
+    controleer_bronnen(tekst, root)
     tekst, figuurbestanden = figuren(tekst, pagina, root)
     lijst = lees_vragen(tekst, meldingen)
     if not lijst:

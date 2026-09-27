@@ -135,6 +135,11 @@ def nummer(item_id):
     return int(item_id.rsplit("-", 1)[1])
 
 
+def doel_van(bestanden, rel):
+    """{qti_identifier: external_id} zoals een push ze zet."""
+    return {i: f"{rel}#{nummer(i)}@{h}" for i, h in items_van(bestanden).items()}
+
+
 def zip_van(bestanden):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
@@ -222,7 +227,7 @@ def main(argv=None):
                                            not args.niet_schudden, args.feedback)
     except qti.Fout as e:
         sys.exit(f"ans-push: {rel}: niets verstuurd\n{e}")
-    doel = {i: f"{rel}#{nummer(i)}@{h}" for i, h in items_van(bestanden).items()}
+    doel = doel_van(bestanden, rel)
     for m in meldingen:
         print(f"  let op: {m}")
 
