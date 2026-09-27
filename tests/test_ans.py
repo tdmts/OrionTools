@@ -1,5 +1,6 @@
 """De ANS-client, zonder net: paginering, 429 en een fout zonder token erin."""
 
+import contextlib
 import datetime
 import email.message
 import io
@@ -258,6 +259,16 @@ class Toets(unittest.TestCase):
         self.assertEqual(onder_body, {"cover": {"shuffle_choices": True}, "publication": {"show_questions": False}})
         self.assertEqual([r[0] for r in regels], ["grades_settings.guess_correction", "cover.shuffle_choices",
                                                   "publication.show_questions"])
+
+    def test_goed_met_de_hand_wordt_afgedrukt_en_niet_verstuurd(self):
+        cfg = {**CFG, "met_de_hand": ["optie X aan"]}
+        uit = io.StringIO()
+        with contextlib.redirect_stdout(uit):
+            toets.herinner(cfg)
+        self.assertEqual(uit.getvalue(), "met de hand nakijken in ANS: optie X aan\n")
+        body, onder, _ = toets.plan(cfg, {}, {})
+        self.assertNotIn("met_de_hand", body)
+        self.assertNotIn("met_de_hand", onder)
 
     def test_goed_enkel_de_delen_uit_de_config_worden_gelezen(self):
         net = Net(Antwoord({"id": 1}, headers()))

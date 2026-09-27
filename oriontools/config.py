@@ -140,6 +140,8 @@ STANDAARD = {
             "grades_settings": {},
             "cover": {},
             "publication": {},
+            # Wat de API niet zet en niet leest; ans-toets drukt het elke run af.
+            "met_de_hand": [],
         },
     },
     "export_pdf": {

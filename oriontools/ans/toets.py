@@ -31,17 +31,24 @@ voorlopige resultaat meteen na het indienen (show_preliminary_result). Een
 nieuwe toets kreeg op 27 september 2026 een publication met active,
 show_questions en show_given_answers aan. Voor een labotoets die de groepen na
 elkaar afleggen, betekent dat de vragen met hun antwoorden doorgeven aan de
-volgende groep. Uitzetten gaat niet via de API: een PATCH met false voor een
-van beide gaf op 27 september 2026 een 422 "is required", ook elk apart,
-terwijl show_preliminary_result: true wel lukte. Die twee zet je dus met de
-hand uit in ANS; in de config zouden ze elke run laten stoppen. Zolang er
-geen publication_timeslots zijn, gaat de inzage niet open.
+volgende groep. Die velden hangen samen, en ANS eist dat ze samen
+veranderen: op 27 september 2026 gaf een PATCH met enkel show_questions of
+enkel show_given_answers op false een 422 "is required". Wie in het scherm
+"vragen tonen" uitzet, zet ook show_criteria en show_grading_description uit,
+en een PATCH met die vier samen op false werd aanvaard (toen ze al false
+stonden; de overgang vanuit true zelf is nog niet gezien). Een vak zet ze dus
+alle vier in de config, of geen. Zolang er geen publication_timeslots zijn,
+gaat de inzage niet open.
 
 Niet elke instelling uit het scherm van ANS zit in de API. "Onbeantwoord
-laten" als optie bij een meerkeuzevraag staat niet in de swagger en in geen
-van de antwoorden op toets, cover of publication: die zet je met de hand. Een
-tweede run laat ze staan, maar een toets die opnieuw aangemaakt wordt (zie
-DE VRAGEN) verliest ze.
+laten" als optie bij een meerkeuzevraag aanzetten veranderde op 27 september
+2026 niets in wat de API teruggeeft: niet in de toets, de cover of de
+publication, en niet in een oefening of een vraag, ook hun updated_at niet.
+Dit commando kan het dus niet zetten en niet nakijken. ans.toets.met_de_hand
+is daarom een lijst van zulke instellingen, die elke run afdrukt, ook met
+--droog: wat je met de hand doet, vergeet je anders. Een tweede run laat ze
+staan, maar een toets die opnieuw aangemaakt wordt (zie DE VRAGEN) verliest
+ze.
 
 Datums staan er niet in, en de API aanvaardt ze ook niet in een assignment:
 wanneer een toets open staat en wanneer de inzage opengaat, loopt via
@@ -274,6 +281,12 @@ def wacht_op_vragen(client, toets_id, aantal, slapen=time.sleep):
         gewacht += push.WACHT
 
 
+def herinner(cfg):
+    """De instellingen uit ans.toets.met_de_hand, die de API niet zet en niet leest."""
+    for tekst in cfg.get("met_de_hand") or []:
+        print(f"met de hand nakijken in ANS: {tekst}")
+
+
 def kort(waarde, lengte=60):
     tekst = repr(waarde)
     return tekst if len(tekst) <= lengte else tekst[:lengte - 3] + "..."
@@ -379,6 +392,7 @@ def main(argv=None):
     for veld, oud, nieuw in regels:
         print(f"  {veld}: {kort(oud)} -> {kort(nieuw)}")
     if args.droog or not (regels or not toets or vervang or (pagina and (not ibt or ibt_anders))):
+        herinner(cfg)
         return 0
 
     try:
@@ -429,6 +443,7 @@ def main(argv=None):
     print(f"  {len(regels)} velden gezet")
     for veld, oud, nieuw in blijft:
         print(f"  let op: {veld} is na het zetten {kort(oud)}, niet {kort(nieuw)}")
+    herinner(cfg)
     return 1 if blijft else 0
 
 
