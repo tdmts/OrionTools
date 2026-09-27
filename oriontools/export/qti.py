@@ -33,6 +33,7 @@ Labo/ is al publiek en mag gewoon als bron dienen, voor een oefentoets.
 --feedback zet de <div class="oplossing"> als feedback bij het item, die de
 student na het antwoorden ziet. Zonder de vlag gaat ze niet mee, wat voor een
 summatieve toets het enige veilige is: de uitleg noemt het juiste antwoord.
+ANS neemt die feedback niet over; zie IN ANS NAGEKEKEN.
 
 HET PAKKET
 ----------
@@ -66,18 +67,19 @@ naartoe wees.
 IN ANS NAGEKEKEN
 ---------------
 Op 25 september 2026 is in QTI 3.0 de Test jezelf van labo RS485 in ANS
-geimporteerd: de feedback verscheen bij het item en een svg-figuur uit de zip
-werd getoond. Op 26 september 2026 volgden 41 items met png-figuren, en daar
-bleken de punten op 0 te staan (zie hierboven). In QTI 2.1 is op die dag
-alleen nagekeken dat een item zijn punten krijgt.
+geimporteerd, en een svg-figuur uit de zip werd getoond. Op 26 september 2026
+volgden 41 items met png-figuren, en daar bleken de punten op 0 te staan (zie
+hierboven). In QTI 2.1 is op die dag alleen nagekeken dat een item zijn punten
+krijgt.
 
 Op 27 september 2026 ging de Test jezelf van RS485 als QTI 2.1 met --feedback
-via ans-push naar ANS, en daar kwam de feedback NIET mee: feedback_correct,
-feedback_incorrect en feedback_mistake van de vraag en de feedback van elke
-keuze stonden op null (GET /exercises/{id}/questions en /questions/{id}),
-terwijl de modalFeedback in het item stond. In QTI 3.0 verscheen ze wel. Hoe
-ANS feedback uit 2.1 leest, is nog niet uitgezocht; --feedback werkt dus
-voorlopig niet in ANS. De figuren in 2.1 zijn nog niet nagekeken.
+via ans-push naar ANS. De png-figuren kwamen mee. De feedback niet, en bij
+nazicht in ANS ook niet in de import in 3.0 van 25 september: de melding
+hierboven dat ze daar verscheen, was fout. De API toont ze evenmin
+(feedback_correct, feedback_incorrect, feedback_mistake en de feedback per
+keuze staan op null). ANS leest een modalFeedback dus niet, in geen van beide
+versies; --feedback zet de uitleg in de zip, maar in ANS komt ze niet aan.
+Dat is zo gelaten: een andere vorm is niet uitgeprobeerd.
 """
 
 import argparse
