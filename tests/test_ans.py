@@ -128,6 +128,11 @@ class Push(unittest.TestCase):
                 encoding="utf-8")
             self.assertEqual(push.menupad(Path(d), "Labo/RS485/T.html"), ["Labo: RS485", "Theorie", "Test jezelf"])
             self.assertIsNone(push.menupad(Path(d), "_toets/X.html"))
+            vak = type("Vak", (), {"root": Path(d), "code": "DeN"})()
+            self.assertEqual(push.banknaam(vak, "Labo/RS485/T.html", "Negeer"),
+                             "DEN - Labo: RS485 - Theorie - Test jezelf")
+            self.assertEqual(push.banknaam(vak, "_toets/X.html", "Toets labo X"), "DEN - Toets labo X")
+            self.assertEqual(push.banknaam(vak, "_toets/X.html"), "DEN - _toets - X")
 
     def test_goed_plan_vervangt_alleen_wat_anders_is(self):
         doel = {"P-01": "p#1@a", "P-02": "p#2@b", "P-03": "p#3@c"}

@@ -14,7 +14,8 @@ Theorie - Test jezelf"). De bank wordt gevonden op haar external_id, en dat is
 de pakketnaam uit export-qti (DeN-Labo-RS485-Theorie-TestJezelf), dus er staat
 geen bank-id in oriontools.json. Bestaat ze niet, dan wordt ze aangemaakt, met
 als naam het pad van de pagina in orion.json: wie de bank in ANS ziet, vindt
-de pagina in het menu terug. De naam mag je in ANS wijzigen; de external_id
+de pagina in het menu terug. Een toets, die niet in het menu staat, krijgt de
+titel van haar pagina (zie banknaam). De naam mag je in ANS wijzigen; de external_id
 niet, want dan maakt de volgende push een tweede bank.
 
 WAT EEN ITEM ONTHOUDT
@@ -113,8 +114,13 @@ def menupad(root, rel):
     return zoek(doc.get("modules", []), [])
 
 
-def banknaam(vak, rel):
-    delen = menupad(vak.root, rel) or list(Path(rel).with_suffix("").parts)
+def banknaam(vak, rel, titel=None):
+    """Het menupad, anders de titel van de pagina, anders het pad.
+
+    Een toets in paths.toets staat niet in orion.json. Haar pad zegt in ANS
+    niets ("DEN - _toets - LaboRS485"), haar <h1> wel ("DEN - Toets labo RS485").
+    """
+    delen = menupad(vak.root, rel) or ([titel] if titel else list(Path(rel).with_suffix("").parts))
     return " - ".join([vak.code.upper(), *delen])
 
 
@@ -232,7 +238,8 @@ def main(argv=None):
         print(f"  let op: {m}")
 
     bank_ext = PROEFBANK if args.proef else pakket
-    bank_naam = PROEFBANK if args.proef else banknaam(vak, rel)
+    bank_naam = PROEFBANK if args.proef else banknaam(
+        vak, rel, qti.paginatitel(pagina.read_text(encoding="utf-8"), None))
     try:
         client = Client()
         bank = zoek_bank(client, bank_ext)

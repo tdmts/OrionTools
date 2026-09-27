@@ -87,7 +87,7 @@ whatever the course's own pages use for their answers. What makes a good item:
   derivable it looks.
 - **A stem does not presuppose its answer.** "Wat is er mis?" tells the student something is, and
   an option "niets" is then dead on arrival. "Welke bewering is waar?" makes every option a claim
-  to judge, including "de bus is correct afgesloten". It also carries distractors that are
+  to judge, including "er is niets mis". It also carries distractors that are
   misconceptions stated as reasons, which is where the knowledge sits.
 - **Options are shuffled** by default. So no "alle bovenstaande" or "geen van bovenstaande" (the
   export warns), and no option that refers to another by letter, nor an explanation that points
