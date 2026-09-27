@@ -70,7 +70,11 @@ whatever the course's own pages use for their answers. What makes a good item:
 - **Every item stands alone.** ANS imports each question as a separate item and may draw them in
   any order. No "zie vraag 3", and nothing in a sentence above the list that a question needs.
 - **Options are shuffled** by default. So no "alle bovenstaande" or "geen van bovenstaande" (the
-  export warns), and no option that refers to another by letter.
+  export warns), and no option that refers to another by letter, nor an explanation that points
+  at "het laatste antwoord".
+- **Spread the right answers over the letters** anyway. The page is read unshuffled, by the user
+  and on paper, so a key that always sits on a gives the test away there; the export warns when
+  more than half share a letter.
 - **Distractors are the mistakes a student actually makes**: a neighbouring concept, a
   confused unit, a step left out of a calculation. Not nonsense, and not jokes.
 - **Options alike in length and form.** The right answer is not the longest or the most careful

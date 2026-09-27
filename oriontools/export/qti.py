@@ -533,6 +533,26 @@ def welgevormd(xml, wat):
         raise Fout(f"{wat}: geen welgevormde XML ({e})")
 
 
+def scheve_letters(lijst):
+    """Een melding als meer dan de helft van de juiste antwoorden op dezelfde letter staat.
+
+    ANS schudt de mogelijkheden, dus in een toets verklapt de letter niets.
+    Op de pagina wel, en die wordt nagelezen en soms afgedrukt; met
+    --niet-schudden ook in ANS. Een eerste versie van de toets van labo RS485
+    had veertien van de vijftien juiste antwoorden op a, zonder dat iets het
+    meldde. Onder vier vragen zegt een verdeling niets, dus zwijgt dit daar.
+    """
+    letters = [next(chr(ord("a") + i) for i, (_, juist) in enumerate(keuzes) if juist)
+               for _, _, keuzes, _ in lijst]
+    if len(letters) < 4:
+        return None
+    letter = max(sorted(set(letters)), key=letters.count)
+    if letters.count(letter) * 2 <= len(letters):
+        return None
+    return (f"{letters.count(letter)} van de {len(letters)} juiste antwoorden staan op {letter}: "
+            "spreid ze over de letters, want op de pagina verklapt de letter het antwoord")
+
+
 def bouw(pagina, root, naam, schudden, feedback):
     """{zippad: bytes} van het pakket, de meldingen en het aantal vragen.
 
@@ -546,6 +566,9 @@ def bouw(pagina, root, naam, schudden, feedback):
     lijst = lees_vragen(tekst, meldingen)
     if not lijst:
         raise Fout(f'{pagina.name}: geen meerkeuzevraag in een <ol class="vragen">')
+    scheef = scheve_letters(lijst)
+    if scheef:
+        meldingen.append(scheef)
 
     titel = paginatitel(tekst, pagina.stem)
     groep = groepen(tekst)

@@ -162,6 +162,18 @@ class ExportQti(unittest.TestCase):
         self.export("_toets/Toets.html")
         self.assertNotIn("T-Toets-02.xml", self.zip().namelist())
 
+    def test_goed_gespreide_letters_zonder_melding(self):
+        self.schrijf("_toets/Toets.html", pagina(*(vraag("V?", "1", "2", "3", juist=i % 3) for i in range(6))))
+        self.assertNotIn("juiste antwoorden staan op", self.export("_toets/Toets.html"))
+
+    def test_fout_scheve_letters_geven_een_melding(self):
+        self.schrijf("_toets/Toets.html", pagina(*(vraag("V?", "1", "2", juist=int(i == 4)) for i in range(5))))
+        self.assertIn("4 van de 5 juiste antwoorden staan op a", self.export("_toets/Toets.html"))
+
+    def test_goed_onder_vier_vragen_geen_melding(self):
+        self.schrijf("_toets/Toets.html", pagina(*(vraag("V?", "1", "2") for _ in range(3))))
+        self.assertNotIn("juiste antwoorden staan op", self.export("_toets/Toets.html"))
+
     def test_fout_twee_juiste_mogelijkheden(self):
         dubbel = '<li>V?<ul><li class="juist">a</li><li class="juist">b</li></ul></li>'
         self.schrijf("_toets/Toets.html", pagina(dubbel))
