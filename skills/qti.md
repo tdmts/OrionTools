@@ -47,7 +47,7 @@ in the browser. The reveal is OrionCSS `main.js`, so it works in a course that h
 of its own as well. The `<h1>` is the title of the package in ANS. Then one `<ol class="vragen">`:
 
 ```html
-<li>Stem, as a question or an incomplete sentence.
+<li data-bron="Labo/RS485/Theorie/WatIsRS485.html">Stem, as a question or an incomplete sentence.
     <ul>
         <li>Option</li>
         <li class="juist">Option</li>
@@ -62,6 +62,8 @@ of its own as well. The `<h1>` is the title of the package in ANS. Then one `<ol
 The markup is OrionCSS's question list, block *Vragenlijst* in `../OrionContent/template.html`,
 whatever the course's own pages use for their answers. What makes a good item:
 
+- **`data-bron` names the page the question tests**, from the course root; several are separated
+  by a space. `ans-dekking` counts it, and the export stops on a path that does not exist.
 - **Exactly one `class="juist"`.** A question with more than one right answer is rewritten, not
   marked twice: pair the options so one pairing is right and say how many there are, or invert
   the stem to "welke is niet". The export stops on zero or two.
