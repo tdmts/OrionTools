@@ -283,6 +283,13 @@ class Toets(unittest.TestCase):
         self.assertIn("itembanktoetsen", str(ctx.exception))
         self.assertIn("/question_banks/9/question_bank_assignments", net.requests[0].full_url)
 
+    def test_goed_itembanktoets_komt_met_haar_exercise_ids(self):
+        net = Net(Antwoord([{"id": 4, "external_id": "E"}], headers()),
+                  Antwoord({"id": 4, "external_id": "E", "exercise_ids": [7, 8]}, headers()))
+        ibt = toets.zoek_itembanktoets(client.Client(GEHEIM, openen=net), 9, "E")
+        self.assertEqual(ibt["exercise_ids"], [7, 8])
+        self.assertTrue(net.requests[1].full_url.endswith("/question_bank_assignments/4"))
+
 
 class Vragen(unittest.TestCase):
     ITEMS = [{"id": 10 + n, "qti_identifier": f"P-{n:02d}", "name": f"vraag {n}"} for n in (1, 2, 3, 10)]

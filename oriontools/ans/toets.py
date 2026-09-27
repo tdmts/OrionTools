@@ -78,8 +78,9 @@ Daarna komt de cursustoets uit die itembanktoets:
   Wijken hun namen af van de pagina, dan meldt dit commando dat.
 
 Een gevulde toets is dus een momentopname. Een vraag die daarna verandert,
-zet ans-push in de bank; in de toets pas je ze met de hand aan, of je trasht
-de toets en draait dit opnieuw, zolang niemand ze aflegde.
+zet ans-push in de bank, en een volgende run zet het nieuwe item in de
+itembanktoets; in de toets pas je ze met de hand aan, of je trasht de toets en
+draait dit opnieuw, zolang niemand ze aflegde.
 
 De bank moet bij zijn. Is een vraag nieuw of gewijzigd tegenover de bank
 (zoals ans-dekking het ziet, met de vlaggen die het best kloppen), dan stopt
@@ -202,8 +203,10 @@ def zoek_toets(client, course_id, external_id):
 
 
 def zoek_itembanktoets(client, bank_id, external_id):
-    return enige(client.alles(f"/question_banks/{bank_id}/question_bank_assignments"),
-                 external_id, "itembanktoetsen")
+    """De itembanktoets, of None. De lijst geeft geen exercise_ids, dus nog een GET."""
+    gevonden = enige(client.alles(f"/question_banks/{bank_id}/question_bank_assignments"),
+                     external_id, "itembanktoetsen")
+    return client.haal(f"/question_bank_assignments/{gevonden['id']}") if gevonden else None
 
 
 def vragen_van(client, toets_id):
@@ -381,8 +384,10 @@ def main(argv=None):
             cover = client.haal(f"/assignments/{toets['id']}/cover")
             body, cover_body, _ = plan(cfg, toets, cover)
         if body:
-            # name staat als verplicht in de swagger, ook bij een PATCH
-            client.vraag("PATCH", f"/assignments/{toets['id']}", body={"name": toets["name"], **body})
+            # name staat als verplicht in de swagger, ook bij een PATCH. Vlak
+            # na de kopie gaf een GET de toets een keer zonder name terug.
+            client.vraag("PATCH", f"/assignments/{toets['id']}",
+                         body={"name": toets.get("name") or naam, **body})
         if cover_body:
             client.vraag("PATCH", f"/assignments/{toets['id']}/cover", body=cover_body)
         # Nog eens lezen: een veld dat ANS stil anders opslaat, valt zo op.

@@ -53,11 +53,11 @@ Daarom trasht dit commando eerst elk item waarvan de external_id niet meer
 klopt, en importeert dan het hele pakket: wat nog klopt, slaat ANS over.
 Mislukt de import halverwege, dan ontbreken er items en zet de volgende push
 ze erin. Een item dat in een itembanktoets zit (assignment_ids, zie ans-toets),
-vervangt het niet: trashen haalt het uit die itembanktoets, en dat beslist de
-docent, niet een push. Een toets in een cursus raakt het niet, die heeft een
-kopie. Een
-item waarvan de vraag van de pagina verdween, blijft staan en wordt gemeld,
-om dezelfde reden.
+vervangt het evengoed, en het meldt in welke: het nieuwe item zit er niet in,
+en ans-toets --vragen zet die itembanktoets weer gelijk aan de pagina. Een
+toets in een cursus raakt het niet, want die heeft een kopie. Een item
+waarvan de vraag van de pagina verdween, blijft staan en wordt gemeld: of het
+weg mag, beslist de docent, niet een push.
 
 Een vraag die van nummer verandert (er komt een vraag voor), krijgt een andere
 qti_identifier. Voor ANS is dat een ander item; elke vraag erna wordt dus
@@ -263,14 +263,12 @@ def main(argv=None):
         return 0
 
     try:
-        # Een item in een itembanktoets vervangen, haalt het eruit. Dat beslist
-        # niet dit commando: het stopt voor het iets schrijft.
-        in_toets = [e for e in gewijzigd
-                    if client.haal(f"/question_bank_exercises/{e['id']}").get("assignment_ids")]
-        if in_toets:
-            sys.exit("ans-push: niets verstuurd. Deze gewijzigde vragen zitten in een itembanktoets, en "
-                     "vervangen haalt ze eruit: " + ", ".join(f"vraag {nummer(e['qti_identifier'])} "
-                                                            f"(item {e['id']})" for e in in_toets))
+        # De lijst van de bank geeft geen assignments; een GET per item wel.
+        in_itembanktoets = {}
+        for e in gewijzigd:
+            for a in client.haal(f"/question_bank_exercises/{e['id']}").get("assignments") or []:
+                in_itembanktoets.setdefault(f"{a.get('name')} ({a['id']})", []).append(
+                    str(nummer(e["qti_identifier"])))
         if not bank:
             bank, _ = client.vraag("POST", "/question_banks", body={"name": bank_naam, "external_id": bank_ext})
             print(f"  bank aangemaakt: {bank['id']}")
@@ -296,6 +294,9 @@ def main(argv=None):
     if ontbreekt:
         sys.exit(f"ans-push: niet in de bank na de import: vraag {', '.join(ontbreekt)}")
     print(f"  {len(nieuw) + len(gewijzigd)} items in de bank gezet")
+    for itembanktoets, nummers in in_itembanktoets.items():
+        print(f"  let op: vraag {', '.join(nummers)} stond in itembanktoets {itembanktoets}, het "
+              f"nieuwe item niet; zet ze gelijk met ans-toets <map> --vragen {rel}")
     return 0
 
 
