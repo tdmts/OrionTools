@@ -1,6 +1,6 @@
 """Zet de meerkeuzevragen van een vragenpagina in een vragenbank van ANS.
 
-    python ../OrionTools/orion.py ans-push Labo/RS485/Theorie/TestJezelf.html --feedback
+    python ../OrionTools/orion.py ans-push Labo/RS485/Theorie/TestJezelf.html
     python ../OrionTools/orion.py ans-push Labo/RS485/Theorie/TestJezelf.html --droog
 
 Het pakket is dat van export-qti, gebouwd met dezelfde functies; wat daar
@@ -29,6 +29,10 @@ De hash is die van het item zelf (de XML en zijn figuren), niet van de pagina
 en geen commit. Een hash van de pagina verandert voor elke vraag wanneer er
 een verandert, en een commit bestaat niet voor een toets in _toets/, die git
 negeert. Zo wijst de hash precies de vraag aan die anders is dan in ANS.
+
+--feedback en --niet-schudden veranderen de XML en dus de hash: push een
+pagina telkens met dezelfde vlaggen, anders geldt elke vraag als gewijzigd.
+--feedback heeft in ANS geen zin (zie export-qti, IN ANS NAGEKEKEN).
 
 EEN GEWIJZIGDE VRAAG: TRASHEN, DAN IMPORTEREN
 ---------------------------------------------
