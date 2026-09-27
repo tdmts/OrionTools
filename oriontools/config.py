@@ -125,6 +125,10 @@ STANDAARD = {
         # fnmatch op het relatieve pad: de pagina's waarover ans-dekking een
         # vraag in ANS verwacht. Leeg is geen dekking; een vragenpagina telt nooit.
         "dekking": [],
+        # fnmatch op het relatieve pad: de pagina's met een <h2 id="doelstellingen">
+        # waarvan ans-dekking elke doelstelling nagaat (DeN: Labo/*/overview.html).
+        # Leeg is geen rapport per doelstelling.
+        "doelstellingen": [],
     },
     "export_pdf": {
         "group": "module",     # lab of module

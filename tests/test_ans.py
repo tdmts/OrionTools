@@ -188,5 +188,31 @@ class Dekking(unittest.TestCase):
         self.assertEqual(dekking.vlaggen((False, True)), "--niet-schudden --feedback")
 
 
+HUB = """<h2 id="leerstof">Leerstof</h2>
+<ol><li>Geen doelstelling.</li></ol>
+<h2 id="doelstellingen">Doelstellingen</h2>
+<p>Op het einde van dit labo kan je:</p>
+<!-- <ol><li>Uitgezet.</li></ol> -->
+<ol>
+<li>Een bus opbouwen</li>
+<li data-bron="Labo/A/Theorie/X.html">Uitleggen <strong>waarom</strong> differential signaling
+    minder gevoelig is voor ruis dan single ended signaling</li>
+<li data-bron="Labo/A/Theorie/Y.html Labo/A/Theorie/Z.html">Simplex en duplex</li>
+</ol>
+<h2 id="evaluatie">Evaluatie</h2>
+<ol><li>Ook geen.</li></ol>"""
+
+
+class Doelstellingen(unittest.TestCase):
+    def test_goed_elke_stand(self):
+        rijen = dekking.per_doelstelling(HUB, {"Labo/A/Theorie/Z.html": ["T.html vraag 1"]})
+        self.assertEqual([(n, s) for n, s, _ in rijen],
+                         [(1, dekking.GEEN_THEORIE), (2, dekking.GEEN_VRAAG), (3, dekking.GEDEKT)])
+        self.assertEqual(rijen[1][2], "Uitleggen waarom differential signaling minder gevoelig is ...")
+
+    def test_goed_zonder_kop_geen_doelstellingen(self):
+        self.assertEqual(dekking.per_doelstelling("<ol><li>Iets.</li></ol>", {}), [])
+
+
 if __name__ == "__main__":
     unittest.main()

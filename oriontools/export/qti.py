@@ -100,7 +100,7 @@ from urllib.parse import unquote, urlparse
 from xml.etree import ElementTree
 
 from .. import repo
-from ..check.rules._gedeeld import COMMENTAAR_RE, lijstitems, top_lijsten, vragen
+from ..check.rules._gedeeld import BRON_RE, COMMENTAAR_RE, lijstitems, top_lijsten, vragen
 
 OPLOSSING_RE = re.compile(r'<div class="oplossing">(.*?)</div>', re.S)
 JUIST_RE = re.compile(r'class="[^"]*\bjuist\b')
@@ -280,9 +280,6 @@ def lees_vragen(tekst, meldingen):
     if fouten:
         raise Fout("\n".join(fouten))
     return uit
-
-
-BRON_RE = re.compile(r'\bdata-bron="([^"]*)"')
 
 
 def bronnen(tekst):

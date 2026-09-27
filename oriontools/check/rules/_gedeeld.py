@@ -234,3 +234,27 @@ def vragen_paginas(ctx):
 
 def heeft_vragen(ctx):
     return True if vragen_paginas(ctx) else 'geen <ol class="vragen">'
+
+
+# ------------------------------------------------ doelstellingen en data-bron
+
+DOELSTELLINGEN_RE = re.compile(r'<h2\b[^>]*\bid="doelstellingen"[^>]*>')
+# Over welke theorie een vraag of een doelstelling gaat: paden vanaf de root,
+# gescheiden door een spatie. Zie ans-dekking.
+BRON_RE = re.compile(r'\bdata-bron="([^"]*)"')
+
+
+def doelstellingen(fragment):
+    """(nummer, openingstag, inhoud) per <li> van de eerste <ol> onder <h2 id="doelstellingen">.
+
+    Alleen tot de volgende <h2>: een <ol> verderop op de pagina is iets anders.
+    Het fragment is zonder commentaar, zoals bij vragen().
+    """
+    kop = DOELSTELLINGEN_RE.search(fragment)
+    if not kop:
+        return []
+    sectie = fragment[kop.end():]
+    volgende = re.search(r"<h2\b", sectie)
+    if volgende:
+        sectie = sectie[:volgende.start()]
+    return [(i, tag, inhoud) for i, (tag, inhoud) in enumerate(lijstitems(sectie, "ol"), 1)]

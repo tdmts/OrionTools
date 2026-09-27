@@ -38,6 +38,27 @@ in een oudere versie.
 Dat de link in de oplossing telt, terwijl de oplossing zelf niet in ANS
 aankomt (zie export-qti, IN ANS NAGEKEKEN): de link zegt waarover de vraag
 gaat, en dat blijft waar, ook zonder de uitleg erbij.
+
+DOELSTELLINGEN
+--------------
+Wat een toets moet nagaan, is een doelstelling; een pagina is daar maar een
+benadering van. Een gedekte pagina zegt niet dat elke doelstelling een vraag
+heeft, en een doelstelling die geen pagina uitlegt, valt in het rapport per
+pagina helemaal weg. Daarom volgt er een rapport per doelstelling.
+
+ans.doelstellingen zegt op welke pagina's ze staan (DeN: de overview.html van
+elk labo): de <li>'s van de eerste <ol> onder <h2 id="doelstellingen">. Zo'n
+<li> noemt met data-bron de theoriepagina's die haar uitleggen, paden vanaf
+de root zoals bij een vraag; de check-regel data-bron houdt ze juist. Per
+doelstelling meldt dit:
+- geen theorie: ze heeft geen data-bron, dus geen pagina legt ze uit;
+- theorie, geen vraag in ANS: geen van haar pagina's is gedekt;
+- gedekt: minstens een van haar pagina's is dat, zoals hierboven.
+
+Een praktische doelstelling (een bus opbouwen, een Arduino programmeren) staat
+er evengoed in: er is geen markering om er een uit te sluiten. Zo'n markering
+verbergt precies de doelstelling die uitleg mist. De zendrichting omschakelen
+met RE en DE in labo RS485 is praktisch, en had in september 2026 geen theorie.
 """
 
 import argparse
@@ -48,7 +69,8 @@ from fnmatch import fnmatch
 from urllib.parse import unquote, urlparse
 
 from .. import repo
-from ..check.rules._gedeeld import COMMENTAAR_RE, top_lijsten, vragen
+from ..check.rules._gedeeld import (BRON_RE, COMMENTAAR_RE, TAGS_RE, doelstellingen,
+                                    top_lijsten, vragen)
 from ..export import qti
 from . import push
 from .client import AnsFout, Client
@@ -56,6 +78,7 @@ from .client import AnsFout, Client
 # (schudden, feedback); de standaard van ans-push eerst, want die wint bij gelijkstand.
 VLAGGEN = [(True, False), (False, False), (True, True), (False, True)]
 HREF_RE = re.compile(r'<a\b[^>]*\bhref="([^"]+)"')
+GEEN_THEORIE, GEEN_VRAAG, GEDEKT = "geen theorie", "theorie, geen vraag in ANS", "gedekt"
 
 
 def html_van(vak, met_toets):
@@ -101,6 +124,30 @@ def verwijzingen(pagina, tekst, root):
                     uit.setdefault(nummer, set()).add(doel.relative_to(root).as_posix())
                 except ValueError:
                     pass  # buiten het vak
+    return uit
+
+
+def kort(inhoud, lengte=60):
+    """De tekst van een <li> op een regel, afgebroken op een woord."""
+    tekst = " ".join(html.unescape(TAGS_RE.sub("", inhoud)).split())
+    if len(tekst) <= lengte:
+        return tekst
+    return tekst[:lengte].rsplit(" ", 1)[0] + " ..."
+
+
+def per_doelstelling(tekst, gedekt):
+    """(nummer, stand, korte tekst) per doelstelling op een pagina; gedekt is {pad: ...}."""
+    uit = []
+    for nummer, tag, inhoud in doelstellingen(COMMENTAAR_RE.sub("", tekst)):
+        m = BRON_RE.search(tag)
+        paden = [html.unescape(p) for p in m.group(1).split()] if m else []
+        if not paden:
+            stand = GEEN_THEORIE
+        elif any(p in gedekt for p in paden):
+            stand = GEDEKT
+        else:
+            stand = GEEN_VRAAG
+        uit.append((nummer, stand, kort(inhoud)))
     return uit
 
 
@@ -194,13 +241,30 @@ def main(argv=None):
 
     if not vak.config["ans"]["dekking"]:
         print("\nDekking: ans.dekking is leeg in oriontools.json")
+    else:
+        doel = te_dekken(vak, {rel for _, rel, _ in paginas})
+        zonder = [rel for rel in doel if rel not in gedekt]
+        print(f"\nDekking: {len(doel) - len(zonder)} van {len(doel)} pagina's uit ans.dekking "
+              "hebben een vraag in ANS")
+        for rel in zonder:
+            print(f"  zonder vraag: {rel}")
+
+    patronen = vak.config["ans"]["doelstellingen"]
+    if not patronen:
         return 0
-    doel = te_dekken(vak, {rel for _, rel, _ in paginas})
-    zonder = [rel for rel in doel if rel not in gedekt]
-    print(f"\nDekking: {len(doel) - len(zonder)} van {len(doel)} pagina's uit ans.dekking "
-          "hebben een vraag in ANS")
-    for rel in zonder:
-        print(f"  zonder vraag: {rel}")
+    rapport = [(rel, per_doelstelling(pad.read_text(encoding="utf-8"), gedekt))
+               for pad, rel in html_van(vak, met_toets=False)
+               if any(fnmatch(rel, p) for p in patronen)]
+    alle = [stand for _, rijen in rapport for _, stand, _ in rijen]
+    print(f"\nDoelstellingen: {alle.count(GEDEKT)} van {len(alle)} hebben een vraag in ANS, "
+          f"{alle.count(GEEN_THEORIE)} hebben geen theorie")
+    for rel, rijen in rapport:
+        if not rijen:
+            print(f'{rel}: geen <ol> onder <h2 id="doelstellingen">')
+            continue
+        print(rel)
+        for nummer, stand, tekst in rijen:
+            print(f"  {nummer} {stand}: {tekst}")
     return 0
 
 
