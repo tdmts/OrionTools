@@ -31,7 +31,11 @@ voorlopige resultaat meteen na het indienen (show_preliminary_result). Een
 nieuwe toets kreeg op 27 september 2026 een publication met active,
 show_questions en show_given_answers aan. Voor een labotoets die de groepen na
 elkaar afleggen, betekent dat de vragen met hun antwoorden doorgeven aan de
-volgende groep; dat zet een vak dus uit in de config.
+volgende groep. Uitzetten gaat niet via de API: een PATCH met false voor een
+van beide gaf op 27 september 2026 een 422 "is required", ook elk apart,
+terwijl show_preliminary_result: true wel lukte. Die twee zet je dus met de
+hand uit in ANS; in de config zouden ze elke run laten stoppen. Zolang er
+geen publication_timeslots zijn, gaat de inzage niet open.
 
 Niet elke instelling uit het scherm van ANS zit in de API. "Onbeantwoord
 laten" als optie bij een meerkeuzevraag staat niet in de swagger en in geen
