@@ -31,6 +31,7 @@ COMMANDOS = {
     "export-pdf": ("oriontools.export.pdf", "een labo of module als PDF"),
     "export-qti": ("oriontools.export.qti", "een vragenpagina als QTI-zip voor ANS"),
     "ans-verken": ("oriontools.ans.verken", "de vragenbanken en cursussen die je ANS-token ziet"),
+    "ans-push": ("oriontools.ans.push", "de meerkeuzevragen van een pagina naar een vragenbank in ANS"),
 }
 
 

@@ -69,9 +69,15 @@ Op 25 september 2026 is in QTI 3.0 de Test jezelf van labo RS485 in ANS
 geimporteerd: de feedback verscheen bij het item en een svg-figuur uit de zip
 werd getoond. Op 26 september 2026 volgden 41 items met png-figuren, en daar
 bleken de punten op 0 te staan (zie hierboven). In QTI 2.1 is op die dag
-alleen nagekeken dat een item zijn punten krijgt; de feedback (modalFeedback)
-en de figuren volgen in 2.1 hetzelfde pad, maar kijk ze na bij de eerste
-import die ze gebruikt.
+alleen nagekeken dat een item zijn punten krijgt.
+
+Op 27 september 2026 ging de Test jezelf van RS485 als QTI 2.1 met --feedback
+via ans-push naar ANS, en daar kwam de feedback NIET mee: feedback_correct,
+feedback_incorrect en feedback_mistake van de vraag en de feedback van elke
+keuze stonden op null (GET /exercises/{id}/questions en /questions/{id}),
+terwijl de modalFeedback in het item stond. In QTI 3.0 verscheen ze wel. Hoe
+ANS feedback uit 2.1 leest, is nog niet uitgezocht; --feedback werkt dus
+voorlopig niet in ANS. De figuren in 2.1 zijn nog niet nagekeken.
 """
 
 import argparse

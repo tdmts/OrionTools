@@ -8,7 +8,10 @@ import unittest
 import urllib.error
 import urllib.parse
 
-from oriontools.ans import client, verken
+import tempfile
+from pathlib import Path
+
+from oriontools.ans import client, push, verken
 
 GEHEIM = "geheim-token-123"
 
@@ -92,6 +95,55 @@ class Academiejaar(unittest.TestCase):
     def test_goed_september_begint_het_jaar(self):
         self.assertEqual(verken.academiejaar(datetime.date(2026, 9, 1)), 2026)
         self.assertEqual(verken.academiejaar(datetime.date(2027, 8, 31)), 2026)
+
+
+class Push(unittest.TestCase):
+    def test_goed_import_upload_zonder_token_en_wacht_op_de_job(self):
+        net = Net(Antwoord({"put_url": "https://store.example/x.zip?sig=1",
+                            "background_job": {"id": 5, "status": "initialized"}}, headers()),
+                  Antwoord({}, headers()),
+                  Antwoord({"id": 5, "status": "pending"}, headers()),
+                  Antwoord({"id": 5, "status": "done"}, headers()))
+        gewacht = []
+        job = push.importeer(client.Client(GEHEIM, openen=net), 7, "x.zip", b"PK", slapen=gewacht.append)
+        self.assertEqual(job["status"], "done")
+        self.assertEqual([r.get_method() for r in net.requests], ["GET", "PUT", "PATCH", "GET"])
+        self.assertIsNone(net.requests[1].get_header("Authorization"))
+        self.assertEqual(json.loads(net.requests[2].data), {"status": "pending"})
+        self.assertEqual(gewacht, [push.WACHT])
+
+    def test_goed_hash_van_een_item_volgt_zijn_figuur(self):
+        xml = b'<item><img src="img/a.png"/></item>'
+        een = push.items_van({"X-01.xml": xml, "img/a.png": b"1", "imsmanifest.xml": b""})
+        twee = push.items_van({"X-01.xml": xml, "img/a.png": b"2", "imsmanifest.xml": b""})
+        self.assertEqual(list(een), ["X-01"])
+        self.assertNotEqual(een, twee)
+
+    def test_goed_banknaam_volgt_het_menu(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "orion.json").write_text(json.dumps({"modules": [
+                {"title": "4. Labo: RS485", "items": [
+                    {"title": "Theorie", "items": [{"title": "Test jezelf", "page": "Labo/RS485/T.html"}]}]}]}),
+                encoding="utf-8")
+            self.assertEqual(push.menupad(Path(d), "Labo/RS485/T.html"), ["Labo: RS485", "Theorie", "Test jezelf"])
+            self.assertIsNone(push.menupad(Path(d), "_toets/X.html"))
+
+    def test_goed_plan_vervangt_alleen_wat_anders_is(self):
+        doel = {"P-01": "p#1@a", "P-02": "p#2@b", "P-03": "p#3@c"}
+        bestaande = [{"id": 1, "qti_identifier": "P-01", "external_id": "p#1@a"},
+                     {"id": 2, "qti_identifier": "P-02", "external_id": "p#2@oud"},
+                     {"id": 4, "qti_identifier": "P-04", "external_id": "p#4@d"},
+                     {"id": 5, "qti_identifier": "P-X-01", "external_id": None},
+                     {"id": 6, "qti_identifier": None, "external_id": None}]
+        nieuw, gewijzigd, verweesd = push.plan(doel, bestaande, "P")
+        self.assertEqual(nieuw, ["P-03"])
+        self.assertEqual([e["id"] for e in gewijzigd], [2])
+        self.assertEqual([e["id"] for e in verweesd], [4])
+
+    def test_fout_twee_banken_met_dezelfde_external_id(self):
+        net = Net(Antwoord([{"id": 1, "external_id": "E"}, {"id": 2, "external_id": "E"}], headers()))
+        with self.assertRaises(client.AnsFout):
+            push.zoek_bank(client.Client(GEHEIM, openen=net), "E")
 
 
 if __name__ == "__main__":

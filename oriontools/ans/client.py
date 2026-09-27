@@ -98,6 +98,19 @@ class Client:
             return (json.loads(inhoud) if inhoud.strip() else None), headers
         raise AssertionError("onbereikbaar")
 
+    def upload(self, put_url, data):
+        """PUT data naar een put_url van ANS. Die is zelf ondertekend en wijst
+        naar de object store, niet naar de API: het token gaat dus niet mee."""
+        req = urllib.request.Request(put_url, data=data, method="PUT")
+        req.add_header("Content-Type", "application/zip")
+        try:
+            with self._openen(req) as antwoord:
+                antwoord.read()
+        except urllib.error.HTTPError as e:
+            raise AnsFout(f"upload naar de object store: {e.code} {_reden(e)}", e.code) from None
+        except urllib.error.URLError as e:
+            raise AnsFout(f"upload naar de object store: niet bereikbaar ({e.reason})") from None
+
     def haal(self, pad, **params):
         return self.vraag("GET", pad, params or None)[0]
 
