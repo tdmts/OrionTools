@@ -18,16 +18,31 @@ DE INSTELLINGEN ZIJN DIE VAN ANS
 --------------------------------
 ans.toets in oriontools.json neemt de velden van de API zonder vertaling over:
 assignment_type en summative, de objecten accessibility_settings en
-grades_settings, en cover, dat naar /assignments/{id}/cover gaat. Wat een veld
+grades_settings, en cover en publication, die elk een eigen endpoint hebben
+(/assignments/{id}/cover, /assignments/{id}/publication). Wat een veld
 doet, staat in de swagger van ANS; een eigen naam ertussen zou elk veld twee
 keer documenteren. Een veld dat niet in de config staat, stuurt dit commando
 niet mee: dan geldt de instelling van de school, of wat er in ANS al staat. Een
 tikfout in een veldnaam weigert ANS met een 422, want de API aanvaardt geen
 onbekende velden.
 
+publication is de inzage: wat een student van zijn resultaat ziet, ook het
+voorlopige resultaat meteen na het indienen (show_preliminary_result). Een
+nieuwe toets kreeg op 27 september 2026 een publication met active,
+show_questions en show_given_answers aan. Voor een labotoets die de groepen na
+elkaar afleggen, betekent dat de vragen met hun antwoorden doorgeven aan de
+volgende groep; dat zet een vak dus uit in de config.
+
+Niet elke instelling uit het scherm van ANS zit in de API. "Onbeantwoord
+laten" als optie bij een meerkeuzevraag staat niet in de swagger en in geen
+van de antwoorden op toets, cover of publication: die zet je met de hand. Een
+tweede run laat ze staan, maar een toets die opnieuw aangemaakt wordt (zie
+DE VRAGEN) verliest ze.
+
 Datums staan er niet in, en de API aanvaardt ze ook niet in een assignment:
-wanneer een toets open staat, loopt via timeslots en publication, en dat
-beslist de docent per zittijd, niet de config.
+wanneer een toets open staat en wanneer de inzage opengaat, loopt via
+timeslots en publication_timeslots, en dat beslist de docent per zittijd, niet
+de config.
 
 EEN TWEEDE RUN ZET DE CONFIG TERUG
 ----------------------------------
@@ -46,8 +61,9 @@ ANS geeft een getal soms als tekst terug (passed_grade "9.99",
 grade_lower_limit "0.0"), terwijl de POST een getal aanvaardt. gelijk()
 vergelijkt daarom op waarde, niet op type.
 
-Een PATCH per record en per run: een voor de toets, een voor de cover. Dat
-blijft onder de vijf wijzigingen per minuut die ANS toelaat.
+Een PATCH per record en per run: een voor de toets, een voor de cover en een
+voor de publication. Dat blijft onder de vijf wijzigingen per minuut die ANS
+toelaat.
 
 DE VRAGEN: EEN KOPIE BIJ HET AANMAKEN
 -------------------------------------
@@ -105,6 +121,7 @@ from .push import menupad
 
 OBJECTEN = ("accessibility_settings", "grades_settings")
 VELDEN = ("assignment_type", "summative")
+ONDER = ("cover", "publication")  # elk op /assignments/{id}/<naam>
 GEDULD = 120
 
 
@@ -164,13 +181,19 @@ def verschil(gewenst, huidig):
             if not k.startswith("_") and not gelijk(v, huidig.get(k))]
 
 
-def plan(cfg, toets, cover):
-    """Wat een run verandert: (toets-body, cover-body, regels).
+def lees_onder(client, toets_id, cfg):
+    """{naam: wat ANS teruggeeft} voor elk deel van ONDER dat in de config staat."""
+    return {naam: client.haal(f"/assignments/{toets_id}/{naam}") for naam in ONDER if cfg.get(naam)}
 
-    toets en cover zijn wat ANS teruggeeft, of {} voor een toets die nog niet
-    bestaat; dan is alles uit de config een verandering. Een body is None als
-    er niets te veranderen valt, en de toets-body draagt geen name. regels zegt
-    per veld wat er verandert, voor --droog en voor de uitvoer.
+
+def plan(cfg, toets, onder):
+    """Wat een run verandert: (toets-body, {deel: body}, regels).
+
+    toets is wat ANS teruggeeft en onder dat van lees_onder(), of {} voor een
+    toets die nog niet bestaat; dan is alles uit de config een verandering. De
+    toets-body is None als er niets te veranderen valt en draagt geen name; een
+    deel van ONDER zonder verandering staat niet in de dict. regels zegt per
+    veld wat er verandert, voor --droog en voor de uitvoer.
     """
     regels = []
     body = {}
@@ -184,10 +207,13 @@ def plan(cfg, toets, cover):
         if anders:
             regels += [(f"{k}.{veld}", oud, nieuw) for veld, oud, nieuw in anders]
             body[k] = {**huidig, **{veld: v for veld, v in cfg[k].items() if not veld.startswith("_")}}
-    cover_anders = verschil(cfg.get("cover") or {}, cover or {})
-    regels += [(f"cover.{veld}", oud, nieuw) for veld, oud, nieuw in cover_anders]
-    cover_body = {veld: nieuw for veld, _, nieuw in cover_anders} or None
-    return body or None, cover_body, regels
+    onder_body = {}
+    for naam in ONDER:
+        anders = verschil(cfg.get(naam) or {}, (onder or {}).get(naam) or {})
+        regels += [(f"{naam}.{veld}", oud, nieuw) for veld, oud, nieuw in anders]
+        if anders:
+            onder_body[naam] = {veld: nieuw for veld, _, nieuw in anders}
+    return body or None, onder_body, regels
 
 
 def enige(lijst, external_id, soort):
@@ -301,7 +327,7 @@ def main(argv=None):
     try:
         client = Client()
         toets = zoek_toets(client, ans["course_id"], ext)
-        cover = client.haal(f"/assignments/{toets['id']}/cover") if toets else None
+        onder = lees_onder(client, toets["id"], cfg) if toets else {}
         if pagina:
             vragen_rel, bank, items, ibt = lees_vragen(client, vak, pagina, ext)
             in_toets = vragen_van(client, toets["id"]) if toets else []
@@ -329,9 +355,9 @@ def main(argv=None):
 
     if vervang:
         # Een nieuwe toets: elk veld uit de config gaat mee.
-        body, cover_body, regels = plan(cfg, {}, {})
+        body, onder_body, regels = plan(cfg, {}, {})
     else:
-        body, cover_body, regels = plan(cfg, toets or {}, cover or {})
+        body, onder_body, regels = plan(cfg, toets or {}, onder)
     if toets:
         print(f"toets: {toets['id']} {toets['name']} ({ext})")
     else:
@@ -380,22 +406,22 @@ def main(argv=None):
                 print(f"  {n} vragen gekopieerd uit de itembanktoets")
             # Wat ANS bij het aanmaken anders zette of uit de itembanktoets
             # overnam, zet de rest van deze run recht.
-            toets = client.haal(f"/assignments/{toets['id']}")
-            cover = client.haal(f"/assignments/{toets['id']}/cover")
-            body, cover_body, _ = plan(cfg, toets, cover)
+            nieuw_id = toets["id"]
+            toets = client.haal(f"/assignments/{nieuw_id}")
+            body, onder_body, _ = plan(cfg, toets, lees_onder(client, nieuw_id, cfg))
         if body:
             # name staat als verplicht in de swagger, ook bij een PATCH. Vlak
             # na de kopie gaf een GET de toets een keer zonder name terug.
             client.vraag("PATCH", f"/assignments/{toets['id']}",
                          body={"name": toets.get("name") or naam, **body})
-        if cover_body:
-            client.vraag("PATCH", f"/assignments/{toets['id']}/cover", body=cover_body)
+        for deel, deel_body in onder_body.items():
+            client.vraag("PATCH", f"/assignments/{toets['id']}/{deel}", body=deel_body)
         # Nog eens lezen: een veld dat ANS stil anders opslaat, valt zo op.
         toets = client.haal(f"/assignments/{toets['id']}")
-        cover = client.haal(f"/assignments/{toets['id']}/cover")
+        onder = lees_onder(client, toets["id"], cfg)
     except AnsFout as e:
         sys.exit(f"ans-toets: {e}")
-    _, _, blijft = plan(cfg, toets, cover)
+    _, _, blijft = plan(cfg, toets, onder)
     print(f"  {len(regels)} velden gezet")
     for veld, oud, nieuw in blijft:
         print(f"  let op: {veld} is na het zetten {kort(oud)}, niet {kort(nieuw)}")
