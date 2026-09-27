@@ -271,6 +271,14 @@ class Toets(unittest.TestCase):
         self.assertNotIn("met_de_hand", body)
         self.assertNotIn("met_de_hand", onder)
 
+    def test_goed_itembanktoets_krijgt_enkel_score_en_cover(self):
+        ibt = {"grades_settings": {"passed_grade": "9.99", "grade_lower_limit": "0.0",
+                                   "guess_correction": False}}
+        body, onder, regels = toets.plan(toets.itembank_cfg(CFG), ibt, {"cover": {}})
+        self.assertEqual(set(body), {"grades_settings"})
+        self.assertEqual(set(onder), {"cover"})
+        self.assertNotIn("summative", [r[0] for r in regels])
+
     def test_goed_enkel_de_delen_uit_de_config_worden_gelezen(self):
         net = Net(Antwoord({"id": 1}, headers()))
         onder = toets.lees_onder(client.Client(GEHEIM, openen=net), 7, {"cover": {"x": 1}, "publication": {}})

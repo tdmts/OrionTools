@@ -106,6 +106,13 @@ Daarna komt de cursustoets uit die itembanktoets:
 - heeft ze vragen, dan blijven die, want vervangen neemt de resultaten mee.
   Wijken hun namen af van de pagina, dan meldt dit commando dat.
 
+De itembanktoets krijgt ook de instellingen die ze met een toets deelt:
+grades_settings en de cover (/question_bank_assignments/{id}/cover), uit
+dezelfde ans.toets. Toegang, summative en de inzage heeft ze niet. Verschillen
+ze, dan meldt ANS in het scherm dat itembanktoets en toets niet in sync zijn;
+dat zag de gebruiker op 27 september 2026 bij RS485, met de giscorrectie en de
+cover die enkel op de toets stonden.
+
 Een gevulde toets is dus een momentopname. Een vraag die daarna verandert,
 zet ans-push in de bank, en een volgende run zet het nieuwe item in de
 itembanktoets; in de toets pas je ze met de hand aan, of je trasht de toets en
@@ -200,6 +207,18 @@ def verschil(gewenst, huidig):
 def lees_onder(client, toets_id, cfg):
     """{naam: wat ANS teruggeeft} voor elk deel van ONDER dat in de config staat."""
     return {naam: client.haal(f"/assignments/{toets_id}/{naam}") for naam in ONDER if cfg.get(naam)}
+
+
+def itembank_cfg(cfg):
+    """Het deel van ans.toets dat ook een itembanktoets heeft: de score en de cover."""
+    return {"grades_settings": cfg.get("grades_settings") or {}, "cover": cfg.get("cover") or {}}
+
+
+def lees_itembank_onder(client, ibt_id, cfg):
+    """De cover van een itembanktoets, als ans.toets er een heeft."""
+    if not cfg.get("cover"):
+        return {}
+    return {"cover": client.haal(f"/question_bank_assignments/{ibt_id}/cover")}
 
 
 def plan(cfg, toets, onder):
@@ -353,12 +372,15 @@ def main(argv=None):
         if pagina:
             vragen_rel, bank, items, ibt = lees_vragen(client, vak, pagina, ext)
             in_toets = vragen_van(client, toets["id"]) if toets else []
+            ibt_onder = lees_itembank_onder(client, ibt["id"], cfg) if ibt else {}
     except AnsFout as e:
         sys.exit(f"ans-toets: {e}")
 
     ibt_anders = vervang = False
+    ibt_body, ibt_onder_body, ibt_regels = None, {}, []
     if pagina:
         erbij, eruit, ibt_anders = itembank_plan(ibt, items)
+        ibt_body, ibt_onder_body, ibt_regels = plan(itembank_cfg(cfg), ibt or {}, ibt_onder)
         vervang = bool(toets) and not in_toets
         print(f"vragen: {vragen_rel}, bank {bank['id']} {bank['name']}, {len(items)} vragen")
         if not ibt:
@@ -374,6 +396,8 @@ def main(argv=None):
                 print("  andere volgorde")
             if not ibt_anders:
                 print("  gelijk aan de pagina")
+        for veld, oud, nieuw in ibt_regels:
+            print(f"  {veld}: {kort(oud)} -> {kort(nieuw)}")
 
     if vervang:
         # Een nieuwe toets: elk veld uit de config gaat mee.
@@ -396,25 +420,34 @@ def main(argv=None):
         print("  instellingen zoals in oriontools.json")
     for veld, oud, nieuw in regels:
         print(f"  {veld}: {kort(oud)} -> {kort(nieuw)}")
-    if args.droog or not (regels or not toets or vervang or (pagina and (not ibt or ibt_anders))):
+    ibt_werk = pagina and (not ibt or ibt_anders or ibt_regels)
+    if args.droog or not (regels or not toets or vervang or ibt_werk):
         herinner(cfg)
         return 0
 
     try:
-        if pagina and (not ibt or ibt_anders):
+        if ibt_werk:
             gewenst = [e["id"] for e in items]
             if not ibt:
                 ibt, _ = client.vraag("POST", f"/question_banks/{bank['id']}/question_bank_assignments",
-                                      body={"name": naam, "external_id": ext, "exercise_ids": gewenst})
+                                      body={"name": naam, "external_id": ext, "exercise_ids": gewenst,
+                                            **(ibt_body or {})})
                 print(f"  itembanktoets aangemaakt: {ibt['id']}")
-            else:
+            elif ibt_anders or ibt_body:
+                vragen = {"exercise_ids": gewenst} if ibt_anders else {}
                 client.vraag("PATCH", f"/question_bank_assignments/{ibt['id']}",
-                             body={"name": ibt["name"], "exercise_ids": gewenst})
+                             body={"name": ibt["name"], **vragen, **(ibt_body or {})})
+            for deel, deel_body in ibt_onder_body.items():
+                client.vraag("PATCH", f"/question_bank_assignments/{ibt['id']}/{deel}", body=deel_body)
             ibt = client.haal(f"/question_bank_assignments/{ibt['id']}")
             if list(ibt.get("exercise_ids") or []) != gewenst:
                 sys.exit(f"ans-toets: itembanktoets {ibt['id']} heeft na het zetten niet de vragen "
                          "van de pagina; de toets is niet aangeraakt")
-            print(f"  itembanktoets gelijk aan de pagina: {len(gewenst)} vragen")
+            _, _, ibt_blijft = plan(itembank_cfg(cfg), ibt, lees_itembank_onder(client, ibt["id"], cfg))
+            print(f"  itembanktoets gelijk aan de pagina: {len(gewenst)} vragen, "
+                  f"{len(ibt_regels)} instellingen gezet")
+            for veld, oud, nieuw in ibt_blijft:
+                print(f"  let op: itembanktoets {veld} is na het zetten {kort(oud)}, niet {kort(nieuw)}")
         if vervang:
             client.vraag("PATCH", f"/assignments/{toets['id']}", body={"name": toets["name"], "trashed": True})
             print(f"  lege toets {toets['id']} getrasht")

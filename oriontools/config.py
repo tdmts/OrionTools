@@ -166,8 +166,11 @@ STANDAARD = {
                 "location_ids": None,
                 "password": None,
             },
-            # Wat de API niet zet en niet leest; ans-toets drukt het elke run af.
-            "met_de_hand": [],
+            # Wat de API niet zet en niet leest; ans-toets drukt het elke run af,
+            # bij elke toets van elk vak (keuze 27 september 2026).
+            "met_de_hand": [
+                "optie \"Onbeantwoord laten\" aan bij meerkeuze- en meerantwoordvragen",
+            ],
         },
     },
     "export_pdf": {
