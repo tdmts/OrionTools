@@ -212,7 +212,7 @@ class Doelstellingen(unittest.TestCase):
     def test_goed_elke_stand(self):
         rijen = dekking.per_doelstelling(HUB, {"Labo/A/Theorie/Z.html": ["T.html vraag 1"]})
         self.assertEqual([(n, s) for n, s, _ in rijen],
-                         [(1, dekking.GEEN_THEORIE), (2, dekking.GEEN_VRAAG), (3, dekking.GEDEKT)])
+                         [(1, dekking.GEEN_BRON),(2, dekking.GEEN_VRAAG), (3, dekking.GEDEKT)])
         self.assertEqual(rijen[1][2], "Uitleggen waarom differential signaling minder gevoelig is ...")
 
     def test_goed_zonder_kop_geen_doelstellingen(self):

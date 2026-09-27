@@ -1,4 +1,4 @@
-"""data-bron: over welke theorie een vraag of een doelstelling gaat."""
+"""data-bron: op welke pagina een vraag of een doelstelling steunt."""
 
 import html
 import posixpath
@@ -28,9 +28,10 @@ def met_bron(ctx):
 class DataBron(Regel):
     """Elk pad in een data-bron bestaat, vanaf de root en met exact die hoofdletters.
 
-    data-bron zegt over welke theorie iets gaat: op de <li> van een vraag, en
-    op de <li> van een doelstelling onder <h2 id="doelstellingen">. ans-dekking
-    leest het, en vergelijkt die paden als tekst met de paden waarnaar een
+    data-bron zegt op welke pagina iets steunt, de theorie of de opdracht: op
+    de <li> van een vraag, en op de <li> van een doelstelling onder
+    <h2 id="doelstellingen">. ans-dekking leest het, en vergelijkt die paden
+    als tekst met de paden waarnaar een
     vraag in ANS wijst. Een tikfout, een verkeerde hoofdletter of een pad met
     ../ geeft daar dus geen fout, maar een doelstelling die voor altijd "geen
     vraag in ANS" blijft terwijl de vraag er staat. ans-dekking praat met ANS

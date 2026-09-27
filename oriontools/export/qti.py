@@ -17,9 +17,10 @@ dan kan dezelfde vraag op twee plaatsen een ander juist antwoord hebben. Een
 toets die Claude schrijft, is dus een gewone vragenpagina in _toets/: je leest
 ze na in de browser, met de uitklap van main.js, en exporteert pas daarna.
 
-Een vraag in een toets zegt over welke theorie ze gaat met data-bron op haar
-<li>: een pad vanaf de root van het vak, meerdere gescheiden door een spatie
-(data-bron="Labo/RS485/Theorie/WatIsRS485.html"). ans-dekking leest het. Een
+Een vraag in een toets zegt over welke pagina ze gaat (theorie of opdracht)
+met data-bron op haar <li>: een pad vanaf de root van het vak, meerdere
+gescheiden door een spatie (data-bron="Labo/RS485/Theorie/WatIsRS485.html").
+ans-dekking leest het. Een
 pad dat niet bestaat, stopt de export: de check ziet het niet, want ze slaat
 paths.toets over, en in CI bestaat die map niet eens.
 

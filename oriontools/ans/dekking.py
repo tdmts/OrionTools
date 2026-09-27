@@ -48,17 +48,25 @@ pagina helemaal weg. Daarom volgt er een rapport per doelstelling.
 
 ans.doelstellingen zegt op welke pagina's ze staan (DeN: de overview.html van
 elk labo): de <li>'s van de eerste <ol> onder <h2 id="doelstellingen">. Zo'n
-<li> noemt met data-bron de theoriepagina's die haar uitleggen, paden vanaf
-de root zoals bij een vraag; de check-regel data-bron houdt ze juist. Per
+<li> noemt met data-bron de pagina's waarop ze steunt, paden vanaf de root
+zoals bij een vraag; de check-regel data-bron houdt ze juist. Per
 doelstelling meldt dit:
-- geen theorie: ze heeft geen data-bron, dus geen pagina legt ze uit;
-- theorie, geen vraag in ANS: geen van haar pagina's is gedekt;
+- geen bron: ze heeft geen data-bron;
+- bron, geen vraag in ANS: geen van haar pagina's is gedekt;
 - gedekt: minstens een van haar pagina's is dat, zoals hierboven.
 
-Een praktische doelstelling (een bus opbouwen, een Arduino programmeren) staat
-er evengoed in: er is geen markering om er een uit te sluiten. Zo'n markering
-verbergt precies de doelstelling die uitleg mist. De zendrichting omschakelen
-met RE en DE in labo RS485 is praktisch, en had in september 2026 geen theorie.
+Een praktische doelstelling (een bus opbouwen, de zendrichting omschakelen)
+steunt op de opdracht, niet op theorie, en noemt dus de Opdracht.html van haar
+labo. Dat telt zonder meer: een pagina is gedekt zodra een vraag ernaar wijst,
+ook buiten ans.dekking, dat alleen het rapport per pagina afbakent. Het pad is
+grof: elke toetsvraag over de opdracht dekt elke praktische doelstelling van
+dat labo tegelijk, ook een waarover geen vraag meer gaat. In september 2026
+toetste de labotoets van RS485 elk van de drie met minstens twee vragen; een
+fijner pad (een anker per doelstelling) kost een attribuut op elke vraag, en
+dat woog toen niet op.
+
+Er is geen markering om een doelstelling uit te sluiten. Zo'n markering
+verbergt precies de doelstelling waarop niets steunt.
 """
 
 import argparse
@@ -78,7 +86,7 @@ from .client import AnsFout, Client
 # (schudden, feedback); de standaard van ans-push eerst, want die wint bij gelijkstand.
 VLAGGEN = [(True, False), (False, False), (True, True), (False, True)]
 HREF_RE = re.compile(r'<a\b[^>]*\bhref="([^"]+)"')
-GEEN_THEORIE, GEEN_VRAAG, GEDEKT = "geen theorie", "theorie, geen vraag in ANS", "gedekt"
+GEEN_BRON, GEEN_VRAAG, GEDEKT = "geen bron", "bron, geen vraag in ANS", "gedekt"
 
 
 def html_van(vak, met_toets):
@@ -142,12 +150,12 @@ def per_doelstelling(tekst, gedekt):
         m = BRON_RE.search(tag)
         paden = [html.unescape(p) for p in m.group(1).split()] if m else []
         if not paden:
-            stand = GEEN_THEORIE
+            toestand = GEEN_BRON
         elif any(p in gedekt for p in paden):
-            stand = GEDEKT
+            toestand = GEDEKT
         else:
-            stand = GEEN_VRAAG
-        uit.append((nummer, stand, kort(inhoud)))
+            toestand = GEEN_VRAAG
+        uit.append((nummer, toestand, kort(inhoud)))
     return uit
 
 
@@ -255,16 +263,16 @@ def main(argv=None):
     rapport = [(rel, per_doelstelling(pad.read_text(encoding="utf-8"), gedekt))
                for pad, rel in html_van(vak, met_toets=False)
                if any(fnmatch(rel, p) for p in patronen)]
-    alle = [stand for _, rijen in rapport for _, stand, _ in rijen]
+    alle = [toestand for _, rijen in rapport for _, toestand, _ in rijen]
     print(f"\nDoelstellingen: {alle.count(GEDEKT)} van {len(alle)} hebben een vraag in ANS, "
-          f"{alle.count(GEEN_THEORIE)} hebben geen theorie")
+          f"{alle.count(GEEN_BRON)} hebben geen bron")
     for rel, rijen in rapport:
         if not rijen:
             print(f'{rel}: geen <ol> onder <h2 id="doelstellingen">')
             continue
         print(rel)
-        for nummer, stand, tekst in rijen:
-            print(f"  {nummer} {stand}: {tekst}")
+        for nummer, toestand, tekst in rijen:
+            print(f"  {nummer} {toestand}: {tekst}")
     return 0
 
 
