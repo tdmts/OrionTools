@@ -33,6 +33,7 @@ COMMANDOS = {
     "ans-verken": ("oriontools.ans.verken", "de vragenbanken en cursussen die je ANS-token ziet"),
     "ans-push": ("oriontools.ans.push", "de meerkeuzevragen van een pagina naar een vragenbank in ANS"),
     "ans-dekking": ("oriontools.ans.dekking", "verouderde items in ANS en theorie zonder vraag"),
+    "ans-toets": ("oriontools.ans.toets", "de toets van een labo in ANS, met de instellingen uit oriontools.json"),
 }
 
 

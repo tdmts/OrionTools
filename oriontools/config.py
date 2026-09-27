@@ -129,6 +129,16 @@ STANDAARD = {
         # waarvan ans-dekking elke doelstelling nagaat (DeN: Labo/*/overview.html).
         # Leeg is geen rapport per doelstelling.
         "doelstellingen": [],
+        # De instellingen van een toets van ans-toets, met de veldnamen van de
+        # ANS-API. None en {} sturen niets mee: dan geldt wat de school of ANS
+        # instelt. cover gaat naar /assignments/{id}/cover.
+        "toets": {
+            "assignment_type": "Quiz",
+            "summative": None,
+            "accessibility_settings": {},
+            "grades_settings": {},
+            "cover": {},
+        },
     },
     "export_pdf": {
         "group": "module",     # lab of module

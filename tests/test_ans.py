@@ -11,7 +11,7 @@ import urllib.parse
 import tempfile
 from pathlib import Path
 
-from oriontools.ans import client, dekking, push, verken
+from oriontools.ans import client, dekking, push, toets, verken
 from oriontools.export import qti
 
 GEHEIM = "geheim-token-123"
@@ -212,6 +212,64 @@ class Doelstellingen(unittest.TestCase):
 
     def test_goed_zonder_kop_geen_doelstellingen(self):
         self.assertEqual(dekking.per_doelstelling("<ol><li>Iets.</li></ol>", {}), [])
+
+
+CFG = {"assignment_type": "Quiz", "summative": True,
+       "accessibility_settings": {"attempts": 1},
+       "grades_settings": {"passed_grade": 9.99, "grade_lower_limit": "0", "guess_correction": True},
+       "cover": {"_uitleg": "commentaar", "shuffle_choices": True, "description_before": "<div>x</div>"}}
+
+
+class Toets(unittest.TestCase):
+    def test_goed_nieuwe_toets_krijgt_alles_uit_de_config_zonder_commentaar(self):
+        body, cover, regels = toets.plan(CFG, {}, {})
+        self.assertEqual(body, {"assignment_type": "Quiz", "summative": True,
+                                "accessibility_settings": {"attempts": 1},
+                                "grades_settings": CFG["grades_settings"]})
+        self.assertEqual(cover, {"shuffle_choices": True, "description_before": "<div>x</div>"})
+        self.assertEqual(len(regels), 8)
+
+    def test_goed_getal_als_tekst_is_geen_verschil(self):
+        bestaand = {"name": "T", "assignment_type": "Quiz", "summative": True,
+                    "accessibility_settings": {"attempts": 1, "notes": False},
+                    "grades_settings": {"passed_grade": "9.99", "grade_lower_limit": "0.0",
+                                        "guess_correction": True, "rounding": "two_decimal"}}
+        cover = {"shuffle_choices": True, "description_before": "<div>x</div>", "display_headers": True}
+        self.assertEqual(toets.plan(CFG, bestaand, cover), (None, None, []))
+
+    def test_goed_een_object_gaat_volledig_mee(self):
+        bestaand = {"name": "T", "assignment_type": "Quiz", "summative": True,
+                    "accessibility_settings": {"attempts": 1},
+                    "grades_settings": {"passed_grade": "9.99", "grade_lower_limit": "0.0",
+                                        "guess_correction": False, "rounding": "two_decimal"}}
+        body, cover, regels = toets.plan(CFG, bestaand, {"shuffle_choices": False, "description_before": "<div>x</div>"})
+        self.assertEqual(body, {"grades_settings": {"passed_grade": 9.99, "grade_lower_limit": "0",
+                                                    "guess_correction": True, "rounding": "two_decimal"}})
+        self.assertEqual(cover, {"shuffle_choices": True})
+        self.assertEqual([r[0] for r in regels], ["grades_settings.guess_correction", "cover.shuffle_choices"])
+
+    def test_fout_waar_en_een_zijn_niet_gelijk(self):
+        self.assertFalse(toets.gelijk(True, 1))
+        self.assertFalse(toets.gelijk(None, 0))
+        self.assertTrue(toets.gelijk("20.0", 20))
+
+    def test_goed_naam_en_id_volgen_de_map(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "orion.json").write_text(json.dumps({"modules": [
+                {"title": "4. Labo: RS485", "items": [
+                    {"title": "Inleiding", "page": "Labo/RS485/overview.html"},
+                    {"title": "Theorie", "items": [{"title": "Test jezelf", "page": "Labo/RS485/Theorie/T.html"}]}]},
+                {"title": "5. Labo: RS", "items": [{"title": "Inleiding", "page": "Labo/RS/overview.html"}]}]}),
+                encoding="utf-8")
+            vak = type("Vak", (), {"root": Path(d), "code": "DeN"})()
+            self.assertEqual(toets.toetsnaam(vak, "Labo/RS485"), "DEN - Labo: RS485 - Toets")
+            self.assertEqual(toets.toets_id(vak, "Labo/RS485"), "DeN-Labo-RS485-Toets")
+
+    def test_fout_twee_toetsen_met_dezelfde_external_id(self):
+        net = Net(Antwoord([{"id": 1, "external_id": "E"}, {"id": 2, "external_id": "E"},
+                            {"id": 3, "external_id": "E", "trashed": True}], headers()))
+        with self.assertRaises(client.AnsFout):
+            toets.zoek_toets(client.Client(GEHEIM, openen=net), 9, "E")
 
 
 if __name__ == "__main__":
