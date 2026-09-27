@@ -31,13 +31,15 @@ voorlopige resultaat meteen na het indienen (show_preliminary_result). Een
 nieuwe toets kreeg op 27 september 2026 een publication met active,
 show_questions en show_given_answers aan. Voor een labotoets die de groepen na
 elkaar afleggen, betekent dat de vragen met hun antwoorden doorgeven aan de
-volgende groep. Die velden hangen samen, en ANS eist dat ze samen
-veranderen: op 27 september 2026 gaf een PATCH met enkel show_questions of
-enkel show_given_answers op false een 422 "is required". Wie in het scherm
-"vragen tonen" uitzet, zet ook show_criteria en show_grading_description uit,
-en een PATCH met die vier samen op false werd aanvaard (toen ze al false
-stonden; de overgang vanuit true zelf is nog niet gezien). Een vak zet ze dus
-alle vier in de config, of geen. Zolang er geen publication_timeslots zijn,
+volgende groep. In het scherm is de inzage een boom: Vraagstelling
+(show_questions), daaronder Gegeven antwoorden (show_given_answers), en
+daaronder Beoordelingscriteria (show_criteria) en Modelantwoord
+(show_grading_description). Een ouder uitzetten terwijl een kind aan staat,
+weigert ANS met een 422 "is required": dat gaf op 27 september 2026 een PATCH
+met enkel show_questions of enkel show_given_answers op false. Een PATCH met
+die vier samen op false werd aanvaard (toen ze al false stonden; de overgang
+vanuit true zelf is nog niet gezien). Een vak zet dus een tak volledig uit in
+de config, niet enkel haar top. Zolang er geen publication_timeslots zijn,
 gaat de inzage niet open.
 
 Niet elke instelling uit het scherm van ANS zit in de API. "Onbeantwoord
