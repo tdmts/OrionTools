@@ -116,6 +116,13 @@ STANDAARD = {
         # van een datasheet: wat een student in een tool opent.
         "start_exts": [],
     },
+    # De koppeling met ANS (oriontools/ans/). 0 is niet ingesteld; ans-verken
+    # toont welke id's je token ziet. Een vragenbank staat hier niet: elke
+    # vragenpagina krijgt haar eigen bank. Het token staat nooit hier: zie
+    # oriontools/ans/client.py.
+    "ans": {
+        "course_id": 0,
+    },
     "export_pdf": {
         "group": "module",     # lab of module
         # De bestandsnaam zonder .pdf. Velden: {code} van het vak, {id} van de

@@ -37,6 +37,7 @@ oriontools/
     export/              syllabus, handout, verslag, oplossing, pdf, qti
     export/stijl/        syllabus.css and handout.css, shared by every course
     importers/           brightspace, syllabus, slides
+    ans/                 the ANS API: client (token, paging, 429) and the ans-* commands
 tests/                   a fixture per rule, and check --fix; `python -m unittest` from this root
 SCHRIJFSTIJL.md          the shared prose style; each course's own SCHRIJFSTIJL.md only adds to it
 skills/                  the procedures of the orion-* Claude skills; each course's SKILL.md only adds to one
