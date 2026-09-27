@@ -139,7 +139,33 @@ STANDAARD = {
             "accessibility_settings": {},
             "grades_settings": {},
             "cover": {},
-            "publication": {},
+            # De inzage, voor elk vak dezelfde (keuze 27 september 2026): het
+            # cijfer, het totaal en meteen na het indienen het voorlopige
+            # resultaat, en niets waaruit een volgende groep de vragen of hun
+            # antwoorden leert. Een tak van de boom gaat volledig uit (zie
+            # ans-toets). Elk veld staat erin, zodat een vak er elk kan
+            # overschrijven; None stuurt niets mee.
+            "publication": {
+                "show_preliminary_result": True,
+                "show_grade": True,
+                "show_total_points": True,
+                "show_points_per_question": False,
+                "show_questions": False,
+                "show_given_answers": False,
+                "show_criteria": False,
+                "show_grading_description": False,
+                "allow_export": False,
+                "show_domains": False,
+                "show_objectives": False,
+                "show_average_objective_score": False,
+                "active": None,
+                "show_letter_grade": None,
+                "show_review_consensus": None,
+                "exclude_correctly_answered_questions": None,
+                "excluded_exercise_ids": None,
+                "location_ids": None,
+                "password": None,
+            },
             # Wat de API niet zet en niet leest; ans-toets drukt het elke run af.
             "met_de_hand": [],
         },

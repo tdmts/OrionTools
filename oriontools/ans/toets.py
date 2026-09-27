@@ -189,9 +189,12 @@ def verschil(gewenst, huidig):
     Een veld met _ vooraan is commentaar, zoals elders in oriontools.json.
     config.py slaat het over in een tabel met vaste sleutels, maar niet in een
     vrije zoals cover, en ANS weigert elk veld dat het niet kent.
+
+    Een veld op None stuurt niets mee, zoals summative; zo kan de standaard
+    elk veld van de publication noemen zonder het te zetten.
     """
     return [(k, huidig.get(k), v) for k, v in gewenst.items()
-            if not k.startswith("_") and not gelijk(v, huidig.get(k))]
+            if not k.startswith("_") and v is not None and not gelijk(v, huidig.get(k))]
 
 
 def lees_onder(client, toets_id, cfg):

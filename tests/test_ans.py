@@ -12,6 +12,7 @@ import urllib.parse
 import tempfile
 from pathlib import Path
 
+from oriontools import config
 from oriontools.ans import client, dekking, push, toets, verken
 from oriontools.export import qti
 
@@ -275,6 +276,15 @@ class Toets(unittest.TestCase):
         onder = toets.lees_onder(client.Client(GEHEIM, openen=net), 7, {"cover": {"x": 1}, "publication": {}})
         self.assertEqual(list(onder), ["cover"])
         self.assertTrue(net.requests[0].full_url.endswith("/assignments/7/cover"))
+
+    def test_goed_none_stuurt_niets_mee(self):
+        self.assertEqual(toets.verschil({"a": None, "b": False}, {"a": True, "b": True}), [("b", True, False)])
+
+    def test_goed_standaard_inzage_zet_een_tak_volledig_uit(self):
+        publication = config.STANDAARD["ans"]["toets"]["publication"]
+        tak = ("show_questions", "show_given_answers", "show_criteria", "show_grading_description")
+        self.assertTrue(all(publication[v] is False for v in tak))
+        self.assertTrue(publication["show_objectives"] is publication["show_average_objective_score"] is False)
 
     def test_fout_waar_en_een_zijn_niet_gelijk(self):
         self.assertFalse(toets.gelijk(True, 1))
