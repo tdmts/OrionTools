@@ -69,6 +69,16 @@ whatever the course's own pages use for their answers. What makes a good item:
   the stem to "welke is niet". The export stops on zero or two.
 - **Every item stands alone.** ANS imports each question as a separate item and may draw them in
   any order. No "zie vraag 3", and nothing in a sentence above the list that a question needs.
+- **No item gives another away, and no stem gives its own answer.** A student sees every stem and
+  every option of the test, but not the `div.oplossing`. So once the set is written, read the
+  stems and options together, as the student will, and ask of each fact they state whether another
+  question tests it. The RS485 test had three: a stem that described the circuit as "die enkel
+  ontvangt" while asking whether it was simplex; a question on why circuit 6 is half duplex whose
+  key answered the question on four-wire RS-485; and a stem that stated "/RE is active low", which
+  is half of what another question asked the student to work out. A wrong option leaks as well
+  when knowing it is wrong settles another question. The fix is to describe the situation rather
+  than name the concept (the modes of the two ICs, not "enkel ontvangt"), or to ask the general
+  form ("een ingang is active low") and leave the specific one to the question that applies it.
 - **Options are shuffled** by default. So no "alle bovenstaande" or "geen van bovenstaande" (the
   export warns), and no option that refers to another by letter, nor an explanation that points
   at "het laatste antwoord".
