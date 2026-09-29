@@ -175,8 +175,8 @@ en die kent svg wel; alleen Word kan er niet mee overweg.
 
 DE PARSER IS EEN KOPIE
 ----------------------
-`Node`, `TreeBuilder`, `parse_fragment`, `png_afmeting` en `svg_maat` hieronder
-komen woord voor woord uit oriontools/export/verslag.py. Ze zijn gekopieerd en
+`Node`, `TreeBuilder`, `parse_fragment`, `png_afmeting`, `svg_maat`, `INLINE`
+en `segmenten` hieronder komen woord voor woord uit oriontools/export/verslag.py. Ze zijn gekopieerd en
 niet geimporteerd, want dat bestand stopt bij het inlezen al met een
 foutmelding als python-docx ontbreekt, en dit commando maakt geen docx. Wijzig
 je de een, kijk dan de ander na.
@@ -758,6 +758,84 @@ def figuur(node, basis):
     return "".join(uit)
 
 
+# Wat een tag binnen een zin betekent. De andere tags dragen geen opmaak en
+# leveren alleen hun tekst.
+INLINE = {"code": "code", "kbd": "kbd", "strong": "vet", "b": "vet",
+          "em": "cursief", "i": "cursief"}
+
+
+def segmenten(node):
+    """De tekst van een knoop als (tekst, stijlen)-paren.
+
+    De witruimte wordt samengevoegd zoals inner_text() dat doet, ook over de
+    grens van twee tags heen: "typ <code>ls</code> en" houdt een spatie aan
+    elke kant van ls, en niet twee.
+    """
+    ruw = []
+
+    def loop(n, stijl):
+        for c in n.children:
+            if c.tag in SKIP_CONTENT or c.tag == "#comment":
+                continue
+            if c.tag == "#text":
+                ruw.append((c.text, stijl))
+            else:
+                extra = INLINE.get(c.tag)
+                loop(c, stijl | {extra} if extra else stijl)
+
+    loop(node, frozenset())
+    uit = []
+    spatie = True
+    for tekst, stijl in ruw:
+        tekst = re.sub(r"\s+", " ", tekst)
+        if spatie:
+            tekst = tekst.lstrip(" ")
+        if tekst:
+            uit.append([tekst, stijl])
+            spatie = tekst.endswith(" ")
+    while uit:
+        uit[-1][0] = uit[-1][0].rstrip(" ")
+        if uit[-1][0]:
+            break
+        uit.pop()
+    return [(tekst, stijl) for tekst, stijl in uit]
+
+
+HTML_TAG = {"code": "code", "kbd": "kbd", "vet": "strong", "cursief": "em"}
+
+
+def inline_html(node):
+    """De tekst van node als HTML, met de opmaak die export-verslag in de docx zet."""
+    uit = []
+    for tekst, stijl in segmenten(node):
+        deel = esc(tekst)
+        for naam, tag in HTML_TAG.items():
+            if naam in stijl:
+                deel = f"<{tag}>{deel}</{tag}>"
+        uit.append(deel)
+    return "".join(uit)
+
+
+def terminal(node):
+    """Een .terminal-window: prompt groen, commando vet en wit, uitvoer grijs."""
+    uit = ['<div class="terminal">']
+    for kind in node.children:
+        if "term-line" in kind.classes:
+            prompt = cmd = ""
+            for span in kind.children:
+                if "term-prompt" in span.classes:
+                    prompt = span.inner_text()
+                elif "term-cmd" in span.classes:
+                    cmd = span.inner_text()
+            uit.append(f'<p><span class="prompt">{esc(prompt)}</span> '
+                       f'<span class="cmd">{esc(cmd)}</span></p>')
+        elif "term-out" in kind.classes:
+            uitvoer = html_mod.unescape(kind.raw_text()).strip("\n")
+            uit.append(f"<pre>{esc(uitvoer)}</pre>")
+    uit.append("</div>")
+    return "".join(uit)
+
+
 def accordion(node):
     """Een hint of een tip. Op het scherm klapt die open; hier staat hij open.
 
@@ -772,7 +850,7 @@ def accordion(node):
         rest = Node("div")
         rest.children = [c for c in item.children if "title" not in c.classes]
         kop = f"<strong>{esc(titels[0].inner_text())}</strong> " if titels else ""
-        uit.append(f'<p class="tip">{kop}{esc(rest.inner_text())}</p>')
+        uit.append(f'<p class="tip">{kop}{inline_html(rest)}</p>')
     return "".join(uit)
 
 
@@ -787,7 +865,7 @@ def infobox(node):
         # tekst erna, en twee zinnen zonder scheiding lezen als een.
         opschrift += "."
     kop = f"<strong>{esc(opschrift)}</strong> " if opschrift else ""
-    return f'<p class="tip">{kop}{esc(rest.inner_text())}</p>'
+    return f'<p class="tip">{kop}{inline_html(rest)}</p>'
 
 
 # Een blok binnen een <li> krijgt zijn eigen alinea's onder die stap, in plaats
@@ -796,7 +874,14 @@ def infobox(node):
 BLOKKEN_IN_LI = ("ol", "ul", "figure", "pre")
 
 
+def is_blok(node):
+    """Zelfde vraag als in export-verslag: een terminalvenster is een <div>."""
+    return node.tag in BLOKKEN_IN_LI or "terminal-window" in node.classes
+
+
 def blok_in_li(sub, basis):
+    if "terminal-window" in sub.classes:
+        return terminal(sub)
     if sub.tag == "figure":
         return figuur(sub, basis)
     if sub.tag == "pre":
@@ -809,13 +894,13 @@ def lijst(node, basis):
     for li in node.children:
         if li.tag != "li":
             continue
-        blokken = [c for c in li.children if c.tag in BLOKKEN_IN_LI]
+        blokken = [c for c in li.children if is_blok(c)]
         hints = [c for c in li.children if "accordion-container" in c.classes]
         eigen = Node("li")
         eigen.children = [c for c in li.children
-                          if c.tag not in BLOKKEN_IN_LI
+                          if not is_blok(c)
                           and "accordion-container" not in c.classes]
-        uit.append(f"<li>{esc(eigen.inner_text())}")
+        uit.append(f"<li>{inline_html(eigen)}")
         for blok in blokken:
             uit.append(blok_in_li(blok, basis))
         for hint in hints:
@@ -843,15 +928,15 @@ def vragenlijst(node, uit, antwoorden, staat, basis, waar):
         staat["gezien"].add(nummer)
 
         tabellen = [c for c in li.children if c.tag == "table"]
-        blokken = [c for c in li.children if c.tag in BLOKKEN_IN_LI]
+        blokken = [c for c in li.children if is_blok(c)]
         hints = [c for c in li.children if "accordion-container" in c.classes]
         eigen = Node("li")
         eigen.children = [c for c in li.children
-                          if c.tag != "table" and c.tag not in BLOKKEN_IN_LI
+                          if c.tag != "table" and not is_blok(c)
                           and "accordion-container" not in c.classes]
 
         uit.append(f'<div class="vraag"><p class="vraagtekst">'
-                   f'<span class="nr">{nummer}.</span> {esc(eigen.inner_text())}</p>')
+                   f'<span class="nr">{nummer}.</span> {inline_html(eigen)}</p>')
         for blok in blokken:
             uit.append(blok_in_li(blok, basis))
         for hint in hints:
@@ -925,9 +1010,10 @@ def render(container, uit, antwoorden, staat, basis, waar):
         elif node.tag == "h3":
             uit.append(f"<h3>{esc(node.inner_text())}</h3>")
         elif node.tag == "p":
-            tekst = node.inner_text()
-            if tekst:
-                uit.append(f"<p>{esc(tekst)}</p>")
+            if "controle" in klassen:
+                uit.append(f'<p class="controle">{inline_html(node)}</p>')
+            elif segmenten(node):
+                uit.append(f"<p>{inline_html(node)}</p>")
         elif node.tag == "pre":
             uit.append(f"<pre>{esc(html_mod.unescape(node.raw_text()).strip())}</pre>")
         elif node.tag == "figure":
@@ -938,6 +1024,9 @@ def render(container, uit, antwoorden, staat, basis, waar):
             uit.append(lijst(node, basis))
         elif node.tag in ("div", "section"):
             if "download-container" in klassen:
+                continue
+            if "terminal-window" in klassen:
+                uit.append(terminal(node))
                 continue
             if "info-box" in klassen:
                 uit.append(infobox(node))
@@ -1012,6 +1101,22 @@ li { margin: 0; }
 /* Een tip uit een accordeon en een info-box: ingesprongen, zoals in het
    verslagsjabloon, met het opschrift vet in dezelfde alinea. */
 p.tip { margin: 0 0 10pt 0.5cm; }
+
+/* Commando's, toetsen en de controlebalk: dezelfde kleuren als export-verslag in
+   de docx zet, en die van het terminalvenster komen uit OrionCSS. */
+code { font-family: Consolas, monospace; font-size: 10pt; background: #EDEDED; }
+kbd { font-family: inherit; font-weight: bold; font-size: 9pt;
+      border: 0.5pt solid #000; padding: 0 1pt; }
+div.terminal { background: #1E1E1E; color: #CCCCCC; font-family: Consolas, monospace;
+               font-size: 9pt; padding: 4pt 0.19cm; margin: 0 0 10pt 0;
+               page-break-inside: avoid; }
+div.terminal p { margin: 0; white-space: pre-wrap; }
+div.terminal span.prompt { color: #75A357; font-weight: bold; }
+div.terminal span.cmd { color: #FFFFFF; font-weight: bold; }
+div.terminal pre { margin: 0; font-size: 9pt; color: #CCCCCC; }
+p.controle { font-weight: bold; border: 1.5pt solid #E36C0A; background: #FDEADA;
+             padding: 3pt 4pt; margin: 8pt 0 14pt 0; }
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
 figure { margin: 0 0 10pt 0; text-align: center; page-break-inside: avoid; }
 figure img { max-width: 100%; }

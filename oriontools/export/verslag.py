@@ -30,6 +30,17 @@ met dezelfde HTML-componenten als de rest van de site.
 Binnen dat blok:
 
 * h1 / h2 / h3, alinea's, lijsten en codeblokken worden gewone tekst.
+* <code>, <kbd>, <strong> en <em> binnen een zin houden hun opmaak: een commando
+  in Consolas op een grijze achtergrond, een toets vet met een randje. Zonder
+  dat was elke alinea platte tekst, en stond "typ show vlan" in het document
+  als een zin waarin niets zegt welke woorden je typt.
+* .terminal-window wordt een donker vak, zoals op de site: de prompt groen, het
+  commando vet en wit, de uitvoer grijs. Zo staat wat de student typt apart van
+  wat al op het scherm staat, en toont de prompt van een switch ook in welke
+  context hij het typt ((config)#, (vlan-100)#).
+* <p class="controle"> wordt een omkaderde oranje balk: het moment waarop de
+  student zijn werk laat nakijken. Als vette zin tussen de alinea's las hij er
+  overheen.
 * <ol class="vragen"> is een vragenlijst: elke <li> wordt een genummerde vraag
   met een leeg kader eronder. Geef een <li> de class "screenshot" en het kader
   wordt groot genoeg om er een in te plakken.
@@ -101,6 +112,8 @@ try:
     from docx.enum.table import WD_ROW_HEIGHT_RULE
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt, Cm, RGBColor
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
 except ImportError:
     sys.exit("python-docx ontbreekt. Installeer het met: pip install python-docx")
 
@@ -210,6 +223,154 @@ def parse(path):
 # --------------------------------------------------------------------------
 
 GRIJS = RGBColor(0x5A, 0x5A, 0x5A)
+
+# Wat een tag binnen een zin betekent. De andere tags dragen geen opmaak en
+# leveren alleen hun tekst.
+INLINE = {"code": "code", "kbd": "kbd", "strong": "vet", "b": "vet",
+          "em": "cursief", "i": "cursief"}
+
+
+def segmenten(node):
+    """De tekst van een knoop als (tekst, stijlen)-paren.
+
+    De witruimte wordt samengevoegd zoals inner_text() dat doet, ook over de
+    grens van twee tags heen: "typ <code>ls</code> en" houdt een spatie aan
+    elke kant van ls, en niet twee.
+    """
+    ruw = []
+
+    def loop(n, stijl):
+        for c in n.children:
+            if c.tag in SKIP_CONTENT or c.tag == "#comment":
+                continue
+            if c.tag == "#text":
+                ruw.append((c.text, stijl))
+            else:
+                extra = INLINE.get(c.tag)
+                loop(c, stijl | {extra} if extra else stijl)
+
+    loop(node, frozenset())
+    uit = []
+    spatie = True
+    for tekst, stijl in ruw:
+        tekst = re.sub(r"\s+", " ", tekst)
+        if spatie:
+            tekst = tekst.lstrip(" ")
+        if tekst:
+            uit.append([tekst, stijl])
+            spatie = tekst.endswith(" ")
+    while uit:
+        uit[-1][0] = uit[-1][0].rstrip(" ")
+        if uit[-1][0]:
+            break
+        uit.pop()
+    return [(tekst, stijl) for tekst, stijl in uit]
+
+
+def vul_achter(pr, kleur):
+    """Een achtergrondkleur op een run, een alinea of een cel (w:shd)."""
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), kleur)
+    pr.append(shd)
+
+
+def inline(p, node, vet=False):
+    """De tekst van node als runs in alinea p, met de opmaak van INLINE."""
+    for tekst, stijl in segmenten(node):
+        run = p.add_run(tekst)
+        if vet or "vet" in stijl or "kbd" in stijl:
+            run.bold = True
+        if "cursief" in stijl:
+            run.italic = True
+        if "code" in stijl:
+            run.font.name = "Consolas"
+            run.font.size = Pt(10)
+        if "kbd" in stijl:
+            run.font.size = Pt(9)
+        # De volgorde in w:rPr ligt vast (bdr voor shd, allebei na sz), dus
+        # die twee komen er pas bij als python-docx klaar is met de rest.
+        if "kbd" in stijl:
+            rand = OxmlElement("w:bdr")
+            rand.set(qn("w:val"), "single")
+            rand.set(qn("w:sz"), "4")
+            rand.set(qn("w:space"), "0")
+            rand.set(qn("w:color"), "000000")
+            run._r.get_or_add_rPr().append(rand)
+        if "code" in stijl:
+            vul_achter(run._r.get_or_add_rPr(), "EDEDED")
+
+
+TERMINAL = "1E1E1E"
+PROMPT = RGBColor(0x75, 0xA3, 0x57)
+COMMANDO = RGBColor(0xFF, 0xFF, 0xFF)
+UITVOER = RGBColor(0xCC, 0xCC, 0xCC)
+
+
+def terminal(doc, node):
+    """Een .terminal-window als een donkere cel, met de kleuren van OrionCSS."""
+    tabel = doc.add_table(rows=1, cols=1)
+    # Niet over een bladgrens: het commando onderaan de ene bladzijde en het
+    # antwoord van het toestel bovenaan de volgende lezen als twee dingen.
+    tabel.rows[0]._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+    cel = tabel.rows[0].cells[0]
+    vul_achter(cel._tc.get_or_add_tcPr(), TERMINAL)
+    alineas = []
+
+    def regel():
+        p = cel.paragraphs[0] if not alineas else cel.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        alineas.append(p)
+        return p
+
+    def mono(run, kleur, vet=False):
+        run.font.name = "Consolas"
+        run.font.size = Pt(9)
+        run.font.color.rgb = kleur
+        run.bold = vet
+
+    for kind in node.children:
+        if "term-line" in kind.classes:
+            p = regel()
+            for span in kind.children:
+                if "term-prompt" in span.classes:
+                    mono(p.add_run(span.inner_text() + " "), PROMPT, vet=True)
+                elif "term-cmd" in span.classes:
+                    mono(p.add_run(span.inner_text()), COMMANDO, vet=True)
+        elif "term-out" in kind.classes:
+            for lijn in html.unescape(kind.raw_text()).strip("\n").split("\n"):
+                mono(regel().add_run(lijn if lijn.strip() else " "), UITVOER)
+    if alineas:
+        alineas[0].paragraph_format.space_before = Pt(4)
+        alineas[-1].paragraph_format.space_after = Pt(4)
+    doc.add_paragraph()
+
+
+CONTROLE_RAND = "E36C0A"
+CONTROLE_VULLING = "FDEADA"
+
+
+def controle(doc, node):
+    """<p class="controle">: een omkaderde balk over de volle breedte."""
+    p = doc.add_paragraph()
+    ppr = p._p.get_or_add_pPr()
+    randen = OxmlElement("w:pBdr")
+    for kant in ("top", "left", "bottom", "right"):
+        rand = OxmlElement(f"w:{kant}")
+        rand.set(qn("w:val"), "single")
+        rand.set(qn("w:sz"), "12")
+        rand.set(qn("w:space"), "4")
+        rand.set(qn("w:color"), CONTROLE_RAND)
+        randen.append(rand)
+    # pBdr en shd staan in w:pPr voor spacing; python-docx zet spacing daarna
+    # zelf op de juiste plaats.
+    ppr.append(randen)
+    vul_achter(ppr, CONTROLE_VULLING)
+    p.paragraph_format.space_before = Pt(8)
+    p.paragraph_format.space_after = Pt(14)
+    inline(p, node, vet=True)
 
 
 def kader(doc, opschrift, hoogte_cm=4.0):
@@ -371,7 +532,7 @@ def accordion(doc, node):
         p.paragraph_format.left_indent = Cm(0.5)
         if titels:
             p.add_run(titels[0].inner_text() + " ").bold = True
-        p.add_run(rest.inner_text())
+        inline(p, rest)
 
 
 def codeblok(doc, code):
@@ -395,12 +556,11 @@ def lijst(doc, node, stijl, basis):
         # onderschrift midden in de zin van de stap terecht, zonder dat iets
         # faalt. Een stappenlijst met een screenshot per stap is precies wat een
         # opdracht met een klikpad nodig heeft.
-        genest = [c for c in li.children if c.tag in BLOKKEN_IN_LI]
+        genest = [c for c in li.children if is_blok(c)]
         eigen = Node("li")
-        eigen.children = [c for c in li.children if c.tag not in BLOKKEN_IN_LI]
-        tekst = eigen.inner_text()
-        if tekst:
-            doc.add_paragraph(tekst, style=stijl)
+        eigen.children = [c for c in li.children if not is_blok(c)]
+        if segmenten(eigen):
+            inline(doc.add_paragraph(style=stijl), eigen)
         for sub in genest:
             blok_in_li(doc, sub, basis)
 
@@ -408,9 +568,17 @@ def lijst(doc, node, stijl, basis):
 BLOKKEN_IN_LI = ("ol", "ul", "figure", "pre")
 
 
+def is_blok(node):
+    """Krijgt dit kind van een <li> zijn eigen alinea's? Een terminalvenster is
+    een <div>, dus voor hem hangt het aan de klasse en niet aan de tag."""
+    return node.tag in BLOKKEN_IN_LI or "terminal-window" in node.classes
+
+
 def blok_in_li(doc, sub, basis):
     """Een blok dat binnen een <li> staat en zijn eigen alinea's krijgt."""
-    if sub.tag == "figure":
+    if "terminal-window" in sub.classes:
+        terminal(doc, sub)
+    elif sub.tag == "figure":
         figuur(doc, sub, basis)
     elif sub.tag == "pre":
         codeblok(doc, html.unescape(sub.raw_text()))
@@ -429,16 +597,16 @@ def vragenlijst(doc, node, teller, basis):
         # hoort er evenmin in: die staat als aparte alinea onder de vraag.
         tabellen = [c for c in li.children if c.tag == "table"]
         hints = [c for c in li.children if "accordion-container" in c.classes]
-        blokken = [c for c in li.children if c.tag in BLOKKEN_IN_LI]
+        blokken = [c for c in li.children if is_blok(c)]
         eigen = Node("li")
         eigen.children = [c for c in li.children
-                          if c.tag != "table" and c.tag not in BLOKKEN_IN_LI
+                          if c.tag != "table" and not is_blok(c)
                           and "accordion-container" not in c.classes]
 
         p = doc.add_paragraph()
         run = p.add_run(f"{teller[0]}. ")
         run.bold = True
-        p.add_run(eigen.inner_text())
+        inline(p, eigen)
 
         # Een figuur of een codeblok hoort bij de vraag en komt er meteen
         # onder, voor de hint en voor de invulruimte.
@@ -535,9 +703,10 @@ def render(container, doc, basis, teller=None):
         elif node.tag == "h3":
             doc.add_heading(node.inner_text(), level=2)
         elif node.tag == "p":
-            tekst = node.inner_text()
-            if tekst:
-                doc.add_paragraph(tekst)
+            if "controle" in klassen:
+                controle(doc, node)
+            elif segmenten(node):
+                inline(doc.add_paragraph(), node)
         elif node.tag == "pre":
             codeblok(doc, html.unescape(node.raw_text()))
         elif node.tag == "ol":
@@ -550,7 +719,9 @@ def render(container, doc, basis, teller=None):
         elif node.tag == "figure":
             figuur(doc, node, basis)
         elif node.tag in ("div", "section"):
-            if "info-box" in klassen:
+            if "terminal-window" in klassen:
+                terminal(doc, node)
+            elif "info-box" in klassen:
                 titels = [c for c in node.children if "info-title" in c.classes]
                 opschrift = titels[0].inner_text() if titels else ""
                 rest = Node("div")
@@ -563,7 +734,7 @@ def render(container, doc, basis, teller=None):
                     if opschrift[-1] not in ".:?!":
                         opschrift += "."
                     p.add_run(opschrift + " ").bold = True
-                p.add_run(rest.inner_text())
+                inline(p, rest)
                 p.paragraph_format.left_indent = Cm(0.5)
             elif "download-container" in klassen:
                 continue
