@@ -42,6 +42,8 @@ tests/                   a fixture per rule, and check --fix; `python -m unittes
 SCHRIJFSTIJL.md          the shared prose style; each course's own SCHRIJFSTIJL.md only adds to it
 skills/                  the procedures of the orion-* Claude skills; each course's SKILL.md only adds to one
 tools/parity.py          old check against new, per course
+tools/vm.ps1             drives a VirtualBox VM from outside (keys, mouse, screenshots) to run a lab
+                         as a student; the course's own run script says what to type
 ```
 
 The skills work like `SCHRIJFSTIJL.md`: `skills/check.md` holds the procedure, and a course's
