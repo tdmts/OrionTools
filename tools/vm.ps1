@@ -7,6 +7,9 @@
 #   vm.ps1 line "<tekst>"                  typt tekst en ENTER
 #   vm.ps1 key "enter space ctrl-c"        speciale toetsen, gescheiden door spaties
 #   vm.ps1 click <x> <y> [right|double]    muisklik op schermcoordinaten van de schermafdruk
+#   vm.ps1 drag <x1,y1> <x2,y2>            slepen met de linkerknop ingedrukt (een module in Packet Tracer)
+#   vm.ps1 scroll <x> <y> <n>              muiswiel op x,y: n positief scrolt omlaag, negatief omhoog
+#   vm.ps1 move <x> <y>                    muis verplaatsen zonder klik (een tooltip laten verschijnen)
 #   vm.ps1 run "<bash-commando>"           voert een commando uit in de gast (guestcontrol)
 #   vm.ps1 tail <bestand> [n]              laatste n regels van een bestand in de gast, zonder escapecodes
 #   vm.ps1 scherm <putty-log> [rijen] [kol] de regels die de terminal nu toont, afgespeeld uit het log
@@ -47,6 +50,8 @@ M '=' 0x35 ''; M '+' 0x35 's'; M '<' 0x56 ''; M '>' 0x56 's'; M ' ' 0x39 ''
 M '|' 0x02 'g'; M '@' 0x03 'g'; M '#' 0x04 'g'; M '{' 0x0A 'g'; M '}' 0x0B 'g'
 M '[' 0x1A 'g'; M ']' 0x1B 'g'; M '\' 0x56 'g'
 $speciaal = @{ enter=0x1C; esc=0x01; tab=0x0F; backspace=0x0E; space=0x39; caps=0x3A; up=0x48; down=0x50 }
+# Toetsen met het voorvoegsel E0; super opent het overzicht van GNOME, waar een geminimaliseerd venster terugkomt.
+$uitgebreid = @{ super=0x5B; left=0x4B; right=0x4D; delete=0x53; home=0x47; end=0x4F; pgup=0x49; pgdn=0x51 }
 
 function Stuur([int[]]$codes) {
     # VBoxManage neemt een beperkt aantal codes per aanroep
@@ -174,6 +179,7 @@ switch ($cmd) {
         foreach ($k in $a1.Split(' ')) {
             if ($k -match '^ctrl-(.)$') { $c = $letters[$Matches[1]]; Stuur @(0x1D, $c, ($c -bor 0x80), 0x9D) }
             elseif ($speciaal.ContainsKey($k)) { $c = $speciaal[$k]; Stuur @($c, ($c -bor 0x80)) }
+            elseif ($uitgebreid.ContainsKey($k)) { $c = $uitgebreid[$k]; Stuur @(0xE0, $c, 0xE0, ($c -bor 0x80)) }
             else { throw "Onbekende toets $k" }
         }
     }
@@ -189,6 +195,35 @@ switch ($cmd) {
             for ($i = 0; $i -lt $n; $i++) {
                 $m.PutMouseEventAbsolute($x, $y, 0, 0, $knop); Start-Sleep -Milliseconds 60
                 $m.PutMouseEventAbsolute($x, $y, 0, 0, 0); Start-Sleep -Milliseconds 80
+            }
+        } finally { $s.UnlockMachine() }
+    }
+    { $_ -in 'drag', 'scroll', 'move' } {
+        $vbox = New-Object -ComObject VirtualBox.VirtualBox
+        $s = New-Object -ComObject VirtualBox.Session
+        $vbox.FindMachine($VM).LockMachine($s, 1)
+        try {
+            $m = $s.Console.Mouse
+            if ($cmd -eq 'drag') {
+                # Tussenstappen, want een programma dat pas bij beweging een sleepactie start (Qt) ziet
+                # een sprong van begin naar eind niet als slepen.
+                $van = $a1 -split ',' | ForEach-Object { [int]$_ }; $naar = $a2 -split ',' | ForEach-Object { [int]$_ }
+                $m.PutMouseEventAbsolute($van[0], $van[1], 0, 0, 0); Start-Sleep -Milliseconds 150
+                $m.PutMouseEventAbsolute($van[0], $van[1], 0, 0, 1); Start-Sleep -Milliseconds 600
+                for ($i = 1; $i -le 40; $i++) {
+                    $x = $van[0] + ($naar[0] - $van[0]) * $i / 40; $y = $van[1] + ($naar[1] - $van[1]) * $i / 40
+                    $m.PutMouseEventAbsolute([int]$x, [int]$y, 0, 0, 1); Start-Sleep -Milliseconds 60
+                }
+                Start-Sleep -Milliseconds 800
+                $m.PutMouseEventAbsolute($naar[0], $naar[1], 0, 0, 0)
+            } elseif ($cmd -eq 'scroll') {
+                $m.PutMouseEventAbsolute([int]$a1, [int]$a2, 0, 0, 0); Start-Sleep -Milliseconds 100
+                $n = [int]$a3; $stap = [Math]::Sign($n)
+                for ($i = 0; $i -lt [Math]::Abs($n); $i++) {
+                    $m.PutMouseEventAbsolute([int]$a1, [int]$a2, $stap, 0, 0); Start-Sleep -Milliseconds 60
+                }
+            } else {
+                $m.PutMouseEventAbsolute([int]$a1, [int]$a2, 0, 0, 0)
             }
         } finally { $s.UnlockMachine() }
     }
