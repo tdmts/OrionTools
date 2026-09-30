@@ -5,7 +5,7 @@
 #   vm.ps1 shot <pad.png> [term|x,y,w,h]   schermafdruk; 'term' snijdt het zwarte terminalvlak uit
 #   vm.ps1 type "<tekst>"                  typt tekst
 #   vm.ps1 line "<tekst>"                  typt tekst en ENTER
-#   vm.ps1 key "enter space ctrl-c"        speciale toetsen, gescheiden door spaties
+#   vm.ps1 key "enter space ctrl-c"        speciale toetsen, gescheiden door spaties (ook up, down, shift-tab)
 #   vm.ps1 click <x> <y> [right|double]    muisklik op schermcoordinaten van de schermafdruk
 #   vm.ps1 drag <x1,y1> <x2,y2>            slepen met de linkerknop ingedrukt (een module in Packet Tracer)
 #   vm.ps1 scroll <x> <y> <n>              muiswiel op x,y: n positief scrolt omlaag, negatief omhoog
@@ -49,9 +49,11 @@ M ',' 0x32 ''; M '?' 0x32 's'; M ';' 0x33 ''; M '.' 0x33 's'; M ':' 0x34 ''; M '
 M '=' 0x35 ''; M '+' 0x35 's'; M '<' 0x56 ''; M '>' 0x56 's'; M ' ' 0x39 ''
 M '|' 0x02 'g'; M '@' 0x03 'g'; M '#' 0x04 'g'; M '{' 0x0A 'g'; M '}' 0x0B 'g'
 M '[' 0x1A 'g'; M ']' 0x1B 'g'; M '\' 0x56 'g'
-$speciaal = @{ enter=0x1C; esc=0x01; tab=0x0F; backspace=0x0E; space=0x39; caps=0x3A; up=0x48; down=0x50 }
+$speciaal = @{ enter=0x1C; esc=0x01; tab=0x0F; backspace=0x0E; space=0x39; caps=0x3A }
 # Toetsen met het voorvoegsel E0; super opent het overzicht van GNOME, waar een geminimaliseerd venster terugkomt.
-$uitgebreid = @{ super=0x5B; left=0x4B; right=0x4D; delete=0x53; home=0x47; end=0x4F; pgup=0x49; pgdn=0x51 }
+# Ook up en down: zonder E0 zijn het de pijltjes van het numeriek klavier, en een Flutter-lijst (het
+# installatieprogramma van Ubuntu 26.04) reageert daar niet op.
+$uitgebreid = @{ super=0x5B; up=0x48; down=0x50; left=0x4B; right=0x4D; delete=0x53; home=0x47; end=0x4F; pgup=0x49; pgdn=0x51 }
 
 function Stuur([int[]]$codes) {
     # VBoxManage neemt een beperkt aantal codes per aanroep
@@ -178,6 +180,7 @@ switch ($cmd) {
     'key' {
         foreach ($k in $a1.Split(' ')) {
             if ($k -match '^ctrl-(.)$') { $c = $letters[$Matches[1]]; Stuur @(0x1D, $c, ($c -bor 0x80), 0x9D) }
+            elseif ($k -eq 'shift-tab') { Stuur @(0x2A, 0x0F, 0x8F, 0xAA) }
             elseif ($speciaal.ContainsKey($k)) { $c = $speciaal[$k]; Stuur @($c, ($c -bor 0x80)) }
             elseif ($uitgebreid.ContainsKey($k)) { $c = $uitgebreid[$k]; Stuur @(0xE0, $c, 0xE0, ($c -bor 0x80)) }
             else { throw "Onbekende toets $k" }
