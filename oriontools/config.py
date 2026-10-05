@@ -133,12 +133,52 @@ STANDAARD = {
         # ANS-API. None en {} sturen niets mee: dan geldt wat de school of ANS
         # instelt. cover en publication (de inzage) gaan elk naar
         # /assignments/{id}/<naam>.
+        #
+        # De labotest van elk vak (keuze 5 oktober 2026): wat DeN en ICEES elk
+        # apart hadden staan, en dat was op de letter hetzelfde. Een vak zet
+        # in zijn oriontools.json alleen wat afwijkt. summative omdat de test
+        # meetelt; op 20, geslaagd vanaf 9,99; giscorrectie enkel op beantwoorde
+        # vragen, anders is open laten nooit beter dan gokken en heeft
+        # "Onbeantwoord laten" geen zin. Een minuut per vraag besliste de
+        # lector op 30 september 2026: de toets is berekend op 40 seconden,
+        # IOEM op een minuut, en wie IOEM heeft, is niet te achterhalen.
         "toets": {
+            # De naam van de toets en van haar itembanktoets. {labo} is de titel
+            # van de module in orion.json zonder "Labo:", of wat ans.toets.labo
+            # voor de map zegt; {jaar} is het jaar van de cursus in ANS. Zie
+            # ans-toets.
+            "naam": "Labo {labo} {jaar}",
+            # {map: labo} voor een test die meer dan een labo dekt
+            # ({"Labo/Virtualiseren": "Virtualiseren + Partitioneren"}).
+            "labo": {},
             "assignment_type": "Quiz",
-            "summative": None,
-            "accessibility_settings": {},
-            "grades_settings": {},
-            "cover": {},
+            "summative": True,
+            "accessibility_settings": {"attempts": 1},
+            "grades_settings": {
+                "grade_calculation": "formula",
+                "grade_formula": "points/total*20",
+                "rounding": "two_decimal",
+                "grade_lower_bound": True,
+                "grade_lower_limit": "0.0",
+                "grade_upper_bound": True,
+                "grade_upper_limit": "20.0",
+                "passed_grade": 9.99,
+                "guess_correction": True,
+                "guess_correction_lower_bound": True,
+                "apply_guess_correction_to_answered_questions_only": True,
+            },
+            "cover": {
+                "description_before": (
+                    "<div>Je legt deze test af met gesloten boek.</div><ul>"
+                    "<li>Op de meerkeuzevragen staat giscorrectie. Een vraag die je onbeantwoord laat, "
+                    "kost geen punten.</li><li>Je hebt 1 minuut per vraag.</li>"
+                    "<li>Je kan heen en weer tussen de vragen.</li></ul>"),
+                "display_headers": False,
+                "enumerate_questions": True,
+                "indicate_points": True,
+                "shuffle_choices": True,
+                "shuffle_sections": "all",
+            },
             # De inzage, voor elk vak dezelfde (keuze 27 september 2026): het
             # cijfer, het totaal en meteen na het indienen het voorlopige
             # resultaat, en niets waaruit een volgende groep de vragen of hun
@@ -167,9 +207,13 @@ STANDAARD = {
                 "password": None,
             },
             # Wat de API niet zet en niet leest; ans-toets drukt het elke run af,
-            # bij elke toets van elk vak (keuze 27 september 2026).
+            # bij elke toets van elk vak (keuze 27 september 2026). Een lijst
+            # in oriontools.json vervangt deze, dus een vak dat er een toevoegt,
+            # neemt deze mee over.
             "met_de_hand": [
                 "optie \"Onbeantwoord laten\" aan bij meerkeuze- en meerantwoordvragen",
+                "per paar (de h3 van de vragenpagina, in de titel van elke vraag) een van de twee "
+                "vragen laten trekken, en het aantal getrokken vragen nakijken",
             ],
         },
     },

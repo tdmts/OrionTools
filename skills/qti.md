@@ -23,6 +23,27 @@ Ask with AskUserQuestion, in one call, whatever the request leaves open:
 
 Do not ask what the request already says, and do not ask about the file name; propose one.
 
+### A lab test: the shape that is settled
+
+A summative test on a lab has a fixed shape, decided while ICEES and DeN wrote theirs (September and
+October 2026). Do not ask about it again; ask only what it leaves open.
+
+- **Fifteen questions per student, one minute each.** The cover in `ans.toets` says so, for every
+  course.
+- **Pairs.** One `h2` per objective of the lab (`D1 ...`, from the objectives in its `overview.html`),
+  one `h3` per pair under it (`P1 ...`), and an `<ol class="vragen">` of two questions in each `h3`. The two test the same skill with
+  different content, and ANS draws one of them, so fifteen pairs make fifteen questions. The export
+  puts the headings in each item's title, which is how the pairs are found in ANS.
+- **Every test question has a sister in the lab's Test jezelf**: the same skill, the same number of
+  steps of reasoning, the same form, other content, and **as hard**. The rule behind it: whoever can do
+  the Test jezelf passes the test. Write the sisters in the Test jezelf itself, not in a separate
+  list, and end each explanation in the test with "Zus: Test jezelf ..., vraag N".
+- **The order of work**: the objectives first; then an overview of the pairs, each with what it
+  tests, its form, its source page and its sister, which the user approves; only then the questions.
+- **Spread the effort over what the lab practised.** Objectives that are hands-on (configuring,
+  testing) get more pairs than a definition. A practical skill is asked as a situation: choose the
+  command, read an output, predict what happens.
+
 ## 2. Read the material
 
 Read every page in scope in full, figures and code blocks included. A question tests what the
@@ -94,11 +115,24 @@ whatever the course's own pages use for their answers. What makes a good item:
   at "het laatste antwoord".
 - **Spread the right answers over the letters** anyway. The page is read unshuffled, by the user
   and on paper, so a key that always sits on a gives the test away there; the export warns when
-  more than half share a letter.
+  more than half share a letter. Write them on varying letters from the start, and never the same
+  letter three times in a row. The Test jezelf is never shuffled, so it counts there as well.
 - **Distractors are the mistakes a student actually makes**: a neighbouring concept, a
-  confused unit, a step left out of a calculation. Not nonsense, and not jokes.
+  confused unit, a step left out of a calculation. Not nonsense, and not jokes. The best ones are the
+  misconceptions the page itself corrects, and an option that has the right choice with the wrong
+  reason.
+- **Not too easy.** Recognising a definition ("which task belongs to the kernel") or filling in a
+  2x2 of two definitions is too easy for a test; so is a stem that names the very thing the options
+  test (both VLANs in the stem of "does the HMI reach the server?"). Give a situation to reason
+  about. Questions about the rules of the lab and common-sense questions do not belong in a test at
+  all. ICEES had two pairs sent back twice for this.
 - **Options alike in length and form.** The right answer is not the longest or the most careful
-  one. A giveaway word ("altijd", "nooit") never appears only in the distractors.
+  one, and does not carry a reason the distractors lack: the reason goes in the `div.oplossing`.
+  Two options that share the right half give it away too, and so does a combination question
+  where each distractor changes one part of the answer: make it a full 2x2, or ask for one value.
+  Prefer bare, parallel options (four commands, four port numbers). The export warns when the
+  right answer is clearly the longest; Managed Switch had nine such questions before that check
+  existed. A giveaway word ("altijd", "nooit") never appears only in the distractors.
 - **A negation in the stem is `<strong>niet</strong>`.**
 - **Four options** unless the question calls for three or five.
 - **A figure** is an existing file of the course, linked relatively (`../img/...`), with an `alt`.
@@ -129,3 +163,19 @@ page to fix, then export again; the zip is derived and is never edited.
 
 Report the zip path, the number of questions, whether feedback went in, and where to import:
 ANS, School, Question banks, Settings, Import, QTI 2.1. Not 3.0: ANS reads the points of an item only from a QTI 2.x package, and imports a 3.0 item at 0 points.
+
+## 6. Or straight into ANS
+
+When the course has `ans.course_id`, a lab test goes in through the API instead of a zip, in two
+commands, each first with `--droog`:
+
+```
+python ../OrionTools/orion.py ans-push _toets/<Name>.html
+python ../OrionTools/orion.py ans-toets Labo/<Lab> --vragen _toets/<Name>.html
+```
+
+`ans-push` puts the questions in a bank named after the `<h1>` ("Test labo ..."); `ans-toets` makes
+the test and its item bank test, named "Labo <lab> <jaar>", with the settings of `ans.toets`. What
+each does and why is in their docstrings in `oriontools/ans/`. What the API cannot set, such as
+drawing one question per pair, `ans-toets` prints as "met de hand nakijken"; pass that list on to
+the user. ANS is full enough: reuse what is found by its external_id, and make no trial banks.

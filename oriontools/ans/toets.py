@@ -10,9 +10,19 @@ Evaluatie.html van DeN geeft elk labo een eigen test, dus een toets hoort bij
 een map van het vak. Hij wordt gevonden op zijn external_id in ans.course_id:
 de map met streepjes en -Toets (DeN-Labo-RS485-Toets), zoals ans-push een bank
 vindt op haar pakketnaam. Er staat dus geen toets-id in oriontools.json. De
-naam bij het aanmaken komt uit orion.json: het deel van het menupad dat elke
-pagina van de map deelt ("DEN - Labo: RS485 - Toets"). De naam mag je in ANS
-wijzigen, de external_id niet, want dan maakt de volgende run een tweede toets.
+external_id mag je in ANS niet wijzigen, want dan maakt de volgende run een
+tweede toets.
+
+De naam komt uit ans.toets.naam, "Labo {labo} {jaar}", en geldt voor de toets
+en haar itembanktoets samen: "Labo Managed Switch 2026". {labo} is de module
+in orion.json zonder "Labo:", het deel van het menupad dat elke pagina van de
+map deelt, of wat ans.toets.labo voor de map zegt, voor een test die twee
+labo's dekt ("Virtualiseren + Partitioneren"). {jaar} is het jaar van de
+cursus in ANS, niet dat van vandaag, zodat een run in 2027 de toets van 2026
+niet hernoemt. De naam is een veld als een ander: een tweede run zet hem
+terug. Tot 5 oktober 2026 was het "DEN - Labo: RS485 - Toets", en ICEES
+hernoemde zijn toetsen telkens met de hand naar dit patroon, omdat een toets
+in ANS op die naam gevonden wordt.
 
 DE INSTELLINGEN ZIJN DIE VAN ANS
 --------------------------------
@@ -129,13 +139,14 @@ niet nagekeken.
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
 
 from .. import repo
 from ..export import qti
-from . import dekking, push
+from . import dekking, push, verken
 from .client import AnsFout, Client
 from .push import menupad
 
@@ -168,12 +179,18 @@ def pagina_menupaden(root, rel):
     return [p for p in (menupad(root, pagina) for pagina in paginas) if p]
 
 
-def toetsnaam(vak, rel):
+def labonaam(vak, rel, cfg):
+    """Wat {labo} in de naam wordt: ans.toets.labo voor de map, anders de module in orion.json."""
+    if (cfg.get("labo") or {}).get(rel):
+        return cfg["labo"][rel]
     paden = pagina_menupaden(vak.root, rel)
-    gedeeld = list(Path(rel).parts)
-    if paden:
-        gedeeld = os.path.commonprefix(paden) or gedeeld
-    return " - ".join([vak.code.upper(), *gedeeld, "Toets"])
+    gedeeld = os.path.commonprefix(paden) if paden else []
+    titel = gedeeld[0] if gedeeld else Path(rel).name
+    return re.sub(r"^Labo:?\s*", "", titel)
+
+
+def toetsnaam(vak, rel, cfg, jaar):
+    return cfg["naam"].format(labo=labonaam(vak, rel, cfg), jaar=jaar)
 
 
 def gelijk(a, b):
@@ -363,10 +380,12 @@ def main(argv=None):
     rel = pad_van(vak, args.map, "map").relative_to(vak.root).as_posix()
     pagina = pad_van(vak, args.vragen, "bestand") if args.vragen else None
     ext = toets_id(vak, rel)
-    naam = toetsnaam(vak, rel)
 
     try:
         client = Client()
+        # Het jaar van de cursus, niet van vandaag: een toets van 2026 blijft zo heten.
+        jaar = client.haal(f"/courses/{ans['course_id']}").get("year") or verken.academiejaar()
+        naam = toetsnaam(vak, rel, cfg, jaar)
         toets = zoek_toets(client, ans["course_id"], ext)
         onder = lees_onder(client, toets["id"], cfg) if toets else {}
         if pagina:
@@ -381,6 +400,9 @@ def main(argv=None):
     if pagina:
         erbij, eruit, ibt_anders = itembank_plan(ibt, items)
         ibt_body, ibt_onder_body, ibt_regels = plan(itembank_cfg(cfg), ibt or {}, ibt_onder)
+        if ibt and ibt.get("name") != naam:
+            ibt_regels.insert(0, ("name", ibt.get("name"), naam))
+            ibt_body = {**(ibt_body or {}), "name": naam}
         vervang = bool(toets) and not in_toets
         print(f"vragen: {vragen_rel}, bank {bank['id']} {bank['name']}, {len(items)} vragen")
         if not ibt:
@@ -404,6 +426,9 @@ def main(argv=None):
         body, onder_body, regels = plan(cfg, {}, {})
     else:
         body, onder_body, regels = plan(cfg, toets or {}, onder)
+        if toets and toets.get("name") != naam:
+            regels.insert(0, ("name", toets.get("name"), naam))
+            body = {**(body or {}), "name": naam}
     if toets:
         print(f"toets: {toets['id']} {toets['name']} ({ext})")
     else:
@@ -451,7 +476,7 @@ def main(argv=None):
         if vervang:
             client.vraag("PATCH", f"/assignments/{toets['id']}", body={"name": toets["name"], "trashed": True})
             print(f"  lege toets {toets['id']} getrasht")
-            naam, toets = toets["name"], None
+            toets = None
         if not toets:
             extra = {"question_bank_assignment_id": ibt["id"]} if pagina else {}
             toets, _ = client.vraag("POST", f"/courses/{ans['course_id']}/assignments",
@@ -478,6 +503,8 @@ def main(argv=None):
     except AnsFout as e:
         sys.exit(f"ans-toets: {e}")
     _, _, blijft = plan(cfg, toets, onder)
+    if toets.get("name") != naam:
+        blijft.insert(0, ("name", toets.get("name"), naam))
     print(f"  {len(regels)} velden gezet")
     for veld, oud, nieuw in blijft:
         print(f"  let op: {veld} is na het zetten {kort(oud)}, niet {kort(nieuw)}")

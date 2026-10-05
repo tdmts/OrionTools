@@ -554,6 +554,30 @@ def scheve_letters(lijst):
             "spreid ze over de letters, want op de pagina verklapt de letter het antwoord")
 
 
+def lange_juiste(lijst, factor=1.15, marge=10):
+    """Een melding per vraag waarvan het juiste antwoord duidelijk het langste is.
+
+    Een student die twijfelt, kiest de mogelijkheid met de meeste uitleg, en
+    in een toets met giscorrectie loont dat. De toets van labo Managed Switch
+    had er op 5 oktober 2026 negen, en Assemblage en Virtualiseren bij ICEES
+    eerder ook: telkens het juiste antwoord met een reden erbij die de
+    afleiders niet hadden. Schudden helpt daar niet tegen. Duidelijk betekent
+    hier meer dan factor keer de langste afleider en minstens marge tekens
+    langer, zodat een verschil van een woord niet meldt.
+    """
+    meldingen = []
+    for nummer, _, keuzes, _ in lijst:
+        lengtes = [(len(" ".join(html.unescape(re.sub(r"<[^>]+>", " ", inhoud)).split())), juist)
+                   for inhoud, juist in keuzes]
+        goed = next(lengte for lengte, juist in lengtes if juist)
+        afleiders = [lengte for lengte, juist in lengtes if not juist]
+        if afleiders and goed > factor * max(afleiders) and goed - max(afleiders) >= marge:
+            meldingen.append(f"vraag {nummer}: het juiste antwoord is het langste ({goed} tekens, de "
+                             f"langste afleider {max(afleiders)}); maak de mogelijkheden even lang, "
+                             "en zet de reden in de uitleg")
+    return meldingen
+
+
 def bouw(pagina, root, naam, schudden, feedback):
     """{zippad: bytes} van het pakket, de meldingen en het aantal vragen.
 
@@ -570,6 +594,7 @@ def bouw(pagina, root, naam, schudden, feedback):
     scheef = scheve_letters(lijst)
     if scheef:
         meldingen.append(scheef)
+    meldingen += lange_juiste(lijst)
 
     titel = paginatitel(tekst, pagina.stem)
     groep = groepen(tekst)

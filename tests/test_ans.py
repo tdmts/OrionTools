@@ -229,6 +229,22 @@ CFG = {"assignment_type": "Quiz", "summative": True,
 PUBLICATION = {"active": True, "show_preliminary_result": True, "show_questions": False, "show_grade": True}
 
 
+class LangeJuiste(unittest.TestCase):
+    def test_goed_lang_juist_antwoord_meldt(self):
+        lijst = [(3, "stam", [("kort", False), ("Ja, want dit is een lang en zorgvuldig antwoord", True),
+                              ("ook kort", False)], "")]
+        self.assertEqual(len(qti.lange_juiste(lijst)), 1)
+        self.assertIn("vraag 3", qti.lange_juiste(lijst)[0])
+
+    def test_goed_een_woord_langer_meldt_niet(self):
+        lijst = [(1, "stam", [("Van Server0 en Server1", True), ("Alleen van Server0", False)], "")]
+        self.assertEqual(qti.lange_juiste(lijst), [])
+
+    def test_goed_tags_tellen_niet_mee(self):
+        lijst = [(1, "stam", [("<code>write memory</code>", True), ("write terminal", False)], "")]
+        self.assertEqual(qti.lange_juiste(lijst), [])
+
+
 class Toets(unittest.TestCase):
     def test_goed_nieuwe_toets_krijgt_alles_uit_de_config_zonder_commentaar(self):
         body, onder, regels = toets.plan(CFG, {}, {})
@@ -308,8 +324,12 @@ class Toets(unittest.TestCase):
                 {"title": "5. Labo: RS", "items": [{"title": "Inleiding", "page": "Labo/RS/overview.html"}]}]}),
                 encoding="utf-8")
             vak = type("Vak", (), {"root": Path(d), "code": "DeN"})()
-            self.assertEqual(toets.toetsnaam(vak, "Labo/RS485"), "DEN - Labo: RS485 - Toets")
+            cfg = config.STANDAARD["ans"]["toets"]
+            self.assertEqual(toets.toetsnaam(vak, "Labo/RS485", cfg, 2026), "Labo RS485 2026")
             self.assertEqual(toets.toets_id(vak, "Labo/RS485"), "DeN-Labo-RS485-Toets")
+            samen = {**cfg, "labo": {"Labo/RS485": "RS485 + RS"}}
+            self.assertEqual(toets.toetsnaam(vak, "Labo/RS485", samen, 2027), "Labo RS485 + RS 2027")
+            self.assertEqual(toets.toetsnaam(vak, "Labo/Leeg", cfg, 2026), "Labo Leeg 2026")
 
     def test_fout_twee_toetsen_met_dezelfde_external_id(self):
         net = Net(Antwoord([{"id": 1, "external_id": "E"}, {"id": 2, "external_id": "E"},
