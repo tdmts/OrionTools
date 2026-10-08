@@ -49,7 +49,9 @@ Binnen dat blok:
 * <table class="verslag-tabel"> binnen een <li> wordt een invultabel: de <th>'s
   zijn de kolomkoppen, de eerste <td> van elke rij is het rijlabel, en de rest
   komt leeg. Gebruik dat waar de student per rij een kruisje zet. Zo'n vraag
-  krijgt geen los kader meer; de tabel is de invulruimte.
+  krijgt geen los kader meer; de tabel is de invulruimte. Met de class
+  "bits" erbij wordt het een vak per bit, zoals de AND in de syllabus: zie
+  bittabel().
 * <figure> wordt de afbeelding zelf, ingesloten, met haar figcaption eronder.
   Geen verwijzing naar de pagina: daar staat de opdracht niet meer. Een
   <figure> of een <pre> mag ook binnen een <li> staan: het blok krijgt dan
@@ -720,7 +722,69 @@ def verslag_tabel(doc, node):
         table.rows[n].height = Cm(0.8)
         table.rows[n].height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
 
+    if "bits" in node.classes:
+        bittabel(table)
+
     doc.add_paragraph()
+
+
+# Breed genoeg voor "Subnetmasker" of "Default gateway"; de rest van de
+# tekstbreedte gaat naar de bits.
+BITS_LABEL_CM = 2.8
+
+
+def bittabel(table):
+    """Een verslag-tabel met class "bits": een label en dan een vak per bit.
+
+    Even brede kolommen met de marges van Word laten in een vak van 0,45 cm
+    geen plaats voor een cijfer, en het label past niet. Dus krijgt het label
+    zijn breedte, delen de bits de rest, valt de marge in een cel weg en staat
+    er na elke acht bits een dikkere lijn, waar in de decimale schrijfwijze
+    het punt staat. De kop is klein gezet: daar staat het gewicht van de bit,
+    128 tot 1, en dat is drie cijfers in een vak voor één.
+    """
+    kolommen = len(table.columns)
+    bit_cm = (MAX_BREEDTE_CM - BITS_LABEL_CM) / (kolommen - 1)
+    table.autofit = False
+
+    tblpr = table._tbl.tblPr
+    marges = OxmlElement("w:tblCellMar")
+    for kant in ("left", "right"):
+        m = OxmlElement(f"w:{kant}")
+        m.set(qn("w:w"), "0")
+        m.set(qn("w:type"), "dxa")
+        marges.append(m)
+    # Het schema legt de volgorde in tblPr vast, en Word negeert een
+    # tblCellMar die achter tblLook staat.
+    look = tblpr.find(qn("w:tblLook"))
+    if look is not None:
+        look.addprevious(marges)
+    else:
+        tblpr.append(marges)
+
+    for kolom in range(kolommen):
+        breedte = Cm(BITS_LABEL_CM if kolom == 0 else bit_cm)
+        table.columns[kolom].width = breedte
+        for n, rij in enumerate(table.rows):
+            cel = rij.cells[kolom]
+            cel.width = breedte
+            alinea = cel.paragraphs[0]
+            if kolom == 0:
+                alinea.paragraph_format.left_indent = Cm(0.1)
+                continue
+            alinea.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            if n == 0:
+                for run in alinea.runs:
+                    run.font.size = Pt(6)
+                    run.bold = False
+            if kolom % 8 == 1:
+                randen = OxmlElement("w:tcBorders")
+                links = OxmlElement("w:left")
+                links.set(qn("w:val"), "single")
+                links.set(qn("w:sz"), "12")
+                links.set(qn("w:color"), "000000")
+                randen.append(links)
+                cel._tc.get_or_add_tcPr().append(randen)
 
 
 def render(container, doc, basis, teller=None):
