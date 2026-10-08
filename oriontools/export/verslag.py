@@ -54,7 +54,9 @@ Binnen dat blok:
   Geen verwijzing naar de pagina: daar staat de opdracht niet meer. Een
   <figure> of een <pre> mag ook binnen een <li> staan: het blok krijgt dan
   zijn eigen alinea's onder die stap, in plaats van dat de afbeelding
-  wegvalt en haar onderschrift in de zin van de stap belandt.
+  wegvalt en haar onderschrift in de zin van de stap belandt. Een png komt
+  op ware grootte bij 96 dpi, tot de tekstbreedte; een width op de <img>
+  maakt hem kleiner.
 * Een .svg wordt onderweg door Chrome tot een png gemaakt. Zie "Een svg in de
   opdracht" hieronder; dat is het enige wat een browser nodig heeft.
 * .accordion-item wordt een tip die openstaat. Op het scherm klapt die dicht,
@@ -501,6 +503,13 @@ def figuur(doc, node, basis):
             # 96 dpi is wat Word aanneemt. Een klein plaatje niet opblazen.
             natuurlijk_cm = afmeting[0] / 96 * 2.54
             breedte = Cm(min(natuurlijk_cm, MAX_BREEDTE_CM))
+        # Een width op de <img> verkleint een screenshot die op ware grootte
+        # een halve bladzijde vult, zoals een Windows-dialoogvenster. Ook in
+        # CSS-pixels, dus 96 dpi; de pixels zelf blijven, zodat de tekst
+        # scherp blijft.
+        opgegeven = imgs[0].attrs.get("width")
+        if opgegeven:
+            breedte = Cm(min(float(opgegeven) / 96 * 2.54, MAX_BREEDTE_CM))
         doc.add_picture(str(pad), width=breedte)
 
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -547,7 +556,53 @@ def codeblok(doc, code):
     doc.add_paragraph()
 
 
+def nieuwe_nummering(doc, stijl):
+    """Een numId die bij 1 begint, op de nummering van de stijl.
+
+    Alle alinea's in "List Number" delen in Word één nummering, dus een tweede
+    stappenlijst telde door waar de eerste stopte: de stappen van Scannen in
+    Draadloos netwerk begonnen bij 6, na de vijf van de reset (8 oktober 2026).
+    Een eigen w:num met een startOverride op dezelfde abstracte nummering
+    begint opnieuw bij 1 en houdt de opmaak van de stijl.
+    """
+    numpr = doc.styles[stijl].element.find(qn("w:pPr") + "/" + qn("w:numPr"))
+    if numpr is None:
+        return None
+    numid = numpr.find(qn("w:numId")).get(qn("w:val"))
+    nummering = doc.part.numbering_part.element
+    num = next(n for n in nummering.findall(qn("w:num")) if n.get(qn("w:numId")) == numid)
+    abstract = num.find(qn("w:abstractNumId")).get(qn("w:val"))
+    nieuw_id = str(max(int(n.get(qn("w:numId"))) for n in nummering.findall(qn("w:num"))) + 1)
+    nieuw = OxmlElement("w:num")
+    nieuw.set(qn("w:numId"), nieuw_id)
+    a = OxmlElement("w:abstractNumId")
+    a.set(qn("w:val"), abstract)
+    nieuw.append(a)
+    override = OxmlElement("w:lvlOverride")
+    override.set(qn("w:ilvl"), "0")
+    start = OxmlElement("w:startOverride")
+    start.set(qn("w:val"), "1")
+    override.append(start)
+    nieuw.append(override)
+    nummering.append(nieuw)
+    return nieuw_id
+
+
+def nummer(alinea, numid):
+    """Hangt een alinea aan een eigen nummering (zie nieuwe_nummering)."""
+    ppr = alinea._p.get_or_add_pPr()
+    numpr = OxmlElement("w:numPr")
+    ilvl = OxmlElement("w:ilvl")
+    ilvl.set(qn("w:val"), "0")
+    nid = OxmlElement("w:numId")
+    nid.set(qn("w:val"), numid)
+    numpr.append(ilvl)
+    numpr.append(nid)
+    ppr.append(numpr)
+
+
 def lijst(doc, node, stijl, basis):
+    numid = nieuwe_nummering(doc, stijl) if stijl.startswith("List Number") else None
     for li in node.children:
         if li.tag != "li":
             continue
@@ -560,7 +615,10 @@ def lijst(doc, node, stijl, basis):
         eigen = Node("li")
         eigen.children = [c for c in li.children if not is_blok(c)]
         if segmenten(eigen):
-            inline(doc.add_paragraph(style=stijl), eigen)
+            alinea = doc.add_paragraph(style=stijl)
+            if numid:
+                nummer(alinea, numid)
+            inline(alinea, eigen)
         for sub in genest:
             blok_in_li(doc, sub, basis)
 
