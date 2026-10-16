@@ -26,7 +26,8 @@ naar zijn moduletitel.
 
 De volgorde komt uit orion.json, niet uit de map: de volgorde van het
 Orion-menu, submodule na submodule, en daarbinnen de topics. Een dropbox-topic
-staat in de inhoudstafel als "indienen", zonder pagina.
+staat in de inhoudstafel als "indienen", zonder pagina, en een qr-topic als "QR
+code in Orion": die pagina maakt OrionSync per cursus, de repo heeft ze niet.
 
 Een link naar een pagina in de bundel wordt een sprong binnen de PDF. Een link
 naar een ander bestand van de repo wordt gewone tekst en staat in het verslag
@@ -133,6 +134,10 @@ def slugify(text):
     return re.sub(r'-+', '-', re.sub(r'[^a-z0-9]+', '-', text.lower())).strip('-')
 
 
+# Topics zonder pagina in de repo: ze staan in de inhoudstafel, niet in de bundel.
+ZONDER_PAGINA = ('dropbox', 'qr')
+
+
 def collect_pages(root, orion_module, doc_exts, self_name=None, oefeningen_map=None,
                   exercises_first=False, reference_only=False):
     """Alle topics van een module, in de volgorde waarin ze in de PDF komen.
@@ -159,6 +164,10 @@ def collect_pages(root, orion_module, doc_exts, self_name=None, oefeningen_map=N
                 items.append({'kind': 'dropbox', 'category': category,
                               'title': topic['dropbox'], 'path': None, 'slug': ''})
                 continue
+            if 'qr' in topic:
+                items.append({'kind': 'qr', 'category': category,
+                              'title': topic['title'], 'path': None, 'slug': ''})
+                continue
             path = topic.get('page') or topic.get('file')
             if not path:
                 continue
@@ -184,7 +193,7 @@ def collect_pages(root, orion_module, doc_exts, self_name=None, oefeningen_map=N
         items = ex + ref if exercises_first else ref + ex
 
     for item in items:
-        if item['kind'] == 'dropbox':
+        if item['kind'] in ZONDER_PAGINA:
             continue
         if item.get('document'):
             notes.append('los document, niet ingesloten: %s' % item['path'])
@@ -528,6 +537,9 @@ def build_bundle(root, course, title, items, report, keep_solutions, per_labo):
         if item['kind'] == 'dropbox':
             toc.append('<li>%s <span class="pdf-toc-drop">indienen in Orion</span></li>'
                        % html_mod.escape(item['title']))
+        elif item['kind'] == 'qr':
+            toc.append('<li>%s <span class="pdf-toc-drop">QR code in Orion</span></li>'
+                       % html_mod.escape(item['title']))
         elif item.get('document'):
             toc.append('<li>%s <span class="pdf-toc-doc">los bestand</span></li>'
                        % html_mod.escape(item['title']))
@@ -540,7 +552,7 @@ def build_bundle(root, course, title, items, report, keep_solutions, per_labo):
     parts.append(''.join(toc))
 
     for item in items:
-        if item['kind'] == 'dropbox' or item.get('missing') or item.get('document'):
+        if item['kind'] in ZONDER_PAGINA or item.get('missing') or item.get('document'):
             continue
         parts.append('<section class="pdf-doc" id="%s"><div class="pdf-kicker">%s</div>%s</section>'
                      % (item['slug'], html_mod.escape(kicker(item, per_labo)),
@@ -658,7 +670,7 @@ def main(argv):
         items, notes = collect_pages(root, module, doc_exts, stem + '.pdf',
                                      cfg['oefeningen_map'] if per_labo else None,
                                      args.exercises_first, args.reference_only)
-        pages = [i for i in items if i['kind'] != 'dropbox'
+        pages = [i for i in items if i['kind'] not in ZONDER_PAGINA
                  and not i.get('missing') and not i.get('document')]
         if not pages:
             if per_labo or not args.all:

@@ -51,6 +51,39 @@ class OrionIds(RegelTest):
                          ("orion.json", "id 'inl' komt twee keer voor"))
 
 
+def _qr_menu(*qrs):
+    """Een orion.json met de dropbox 'Introductie (!)' en daaronder de gegeven qr-topics."""
+    items = [{"id": "indienen", "dropbox": "Introductie (!)"}]
+    items += [{"id": f"qr{i}", "title": "QR code", **qr} for i, qr in enumerate(qrs)]
+    return json.dumps({"modules": [{"id": "m", "title": "Module", "items": items}]})
+
+
+ANS = {"assignment_id": 1575422, "deadline": 15, "duration": 10, "ioem": 15}
+
+
+class OrionQr(RegelTest):
+    regel = "orion-qr"
+
+    def test_goed_dropbox_en_ans(self):
+        self.assertSchoon({"orion.json": _qr_menu({"qr": {"dropbox": "Introductie (!)"}},
+                                                  {"qr": {"grade": "Test 1 (!)", "ans": ANS}})})
+
+    def test_fout_dropbox_niet_in_het_menu(self):
+        self.assertMeldt({"orion.json": _qr_menu({"qr": {"dropbox": "Introductie"}})},
+                         ("orion.json", 'geen dropbox-topic "Introductie" in orion.json'))
+
+    def test_fout_vorm(self):
+        self.assertMeldt({"orion.json": _qr_menu({"qr": {"dropbox": "Introductie (!)", "grade": "X"}},
+                                                 {"qr": "Introductie (!)"},
+                                                 {"qr": {"grade": "X", "ans": {**ANS, "duration": "10", "extra": 1}}},
+                                                 {"qr": {"dropbox": "Introductie (!)"}, "page": "a.html"})},
+                         ("orion.json", "qr-topic 'qr0': \"qr\" heeft precies een van dropbox, grade"),
+                         ("orion.json", "qr-topic 'qr1': \"qr\" moet een object zijn"),
+                         ("orion.json", "qr-topic 'qr2': onbekend veld in \"qr.ans\": extra"),
+                         ("orion.json", "qr-topic 'qr2': \"qr.ans.duration\" moet een positief"),
+                         ("orion.json", "qr-topic 'qr3': heeft ook page"))
+
+
 class OrionWees(RegelTest):
     regel = "orion-orphan"
 

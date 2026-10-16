@@ -106,6 +106,83 @@ class OrionIds(Regel):
             gezien.add(rid)
 
 
+ANS_VELDEN = ("assignment_id", "deadline", "duration", "ioem")
+
+
+def _topics(module, uit):
+    """Elk topic onder een module, diepte eerst."""
+    for kind in module.get("items", []):
+        if not isinstance(kind, dict):
+            continue
+        if "items" in kind:
+            _topics(kind, uit)
+        else:
+            uit.append(kind)
+    return uit
+
+
+class OrionQr(Regel):
+    """Een qr-topic in orion.json heeft de vorm die OrionSync verwacht, en zijn dropbox bestaat.
+
+    Een topic met "qr" is een QR-codepagina die OrionSync per cursus maakt uit
+    het sjabloon in OrionQRScanner: de repo heeft er geen bestand voor. De sync
+    zoekt het grade item op via de dropbox ({"dropbox": naam}) of rechtstreeks
+    ({"grade": naam}, met een "ans"-blok voor een ANS-toets), en zet de id van
+    dat grade item in de code, zodat een hernoeming niets breekt.
+
+    Of dat grade item echt bestaat, weet alleen Orion: dat controleren de sync
+    en verify (src/qr.js in OrionSync). Hier wat zonder Orion vast te stellen
+    is: de vorm, en dat een "dropbox" een dropbox-topic in dezelfde orion.json
+    noemt. Een tikfout in de naam faalt dan meteen, niet pas bij de sync.
+    """
+
+    id = "orion-qr"
+
+    def van_toepassing(self, ctx):
+        return heeft_orion(ctx)
+
+    def controleer(self, ctx):
+        try:
+            doc = json.loads((ctx.root / "orion.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return  # orion-targets meldt een kapot bestand
+        topics = [t for m in doc.get("modules", []) if isinstance(m, dict) for t in _topics(m, [])]
+        dropboxen = {t["dropbox"] for t in topics if isinstance(t.get("dropbox"), str)}
+        for t in (t for t in topics if "qr" in t):
+            waar = f"qr-topic '{t.get('id')}'"
+            qr = t["qr"]
+            if not isinstance(t.get("title"), str) or not t["title"].strip():
+                ctx.fout("orion.json", f"{waar}: \"title\" ontbreekt")
+            andere = [k for k in ("page", "file", "dropbox") if k in t]
+            if andere:
+                ctx.fout("orion.json", f"{waar}: heeft ook {', '.join(andere)}; een topic heeft een doel")
+            if not isinstance(qr, dict):
+                ctx.fout("orion.json", f"{waar}: \"qr\" moet een object zijn")
+                continue
+            onbekend = [k for k in qr if k not in ("dropbox", "grade", "ans")]
+            if onbekend:
+                ctx.fout("orion.json", f"{waar}: onbekend veld in \"qr\": {', '.join(onbekend)}")
+            sleutels = [k for k in ("dropbox", "grade") if k in qr]
+            if len(sleutels) != 1:
+                ctx.fout("orion.json", f"{waar}: \"qr\" heeft precies een van dropbox, grade nodig")
+            for k in sleutels:
+                if not isinstance(qr[k], str) or not qr[k].strip():
+                    ctx.fout("orion.json", f"{waar}: \"qr.{k}\" moet een niet-lege tekst zijn")
+            if isinstance(qr.get("dropbox"), str) and qr["dropbox"] not in dropboxen:
+                ctx.fout("orion.json", f"{waar}: geen dropbox-topic \"{qr['dropbox']}\" in orion.json")
+            if "ans" in qr:
+                ans = qr["ans"]
+                if not isinstance(ans, dict):
+                    ctx.fout("orion.json", f"{waar}: \"qr.ans\" moet een object zijn")
+                    continue
+                for k in [k for k in ans if k not in ANS_VELDEN]:
+                    ctx.fout("orion.json", f"{waar}: onbekend veld in \"qr.ans\": {k}")
+                for k in ANS_VELDEN:
+                    v = ans.get(k)
+                    if not isinstance(v, int) or isinstance(v, bool) or v <= 0:
+                        ctx.fout("orion.json", f"{waar}: \"qr.ans.{k}\" moet een positief geheel getal zijn")
+
+
 class OrionWees(Regel):
     """Elke sitepagina onder check.orphan_roots staat als page in orion.json.
 
