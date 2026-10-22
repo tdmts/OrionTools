@@ -55,6 +55,8 @@ STANDAARD = {
         "skip_pages": [],
         # Een titel "<woord> N" zegt niet wat de student bouwt (exercise-name).
         "exercise_title_words": ["oefening", "opdracht"],
+        # Het eerste woord van een dropbox zonder score en van een test (orion-names).
+        "names": {"ungraded": "Verslag", "test": "Test labo"},
         # --audit. De woordenlijsten staan in rules/audit.py; *_extra vult ze aan.
         "audit": {
             "stock_lead_extra": [],
