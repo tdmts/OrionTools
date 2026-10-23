@@ -127,13 +127,14 @@ STANDAARD = {
         # ongewijzigd voorstel ongewijzigd blijft. Er staat niet in dat de lector alles
         # naleest: dat doet hij niet altijd. "Zonder je naam in de tekst" en niet
         # "anoniem": een naam op een schermafdruk houdt feedback-voorbereiden niet
-        # tegen (zijn docstring). Leeg: geen vermelding.
+        # tegen (zijn docstring). "Een score" en niet "je score": een verslag zonder
+        # score krijgt dezelfde vermelding. Leeg: geen vermelding.
         "vermelding": (
             "Deze feedback is opgesteld met behulp van AI, op een anonieme versie van je "
             "verslag: zonder voorblad en zonder je naam in de tekst. "
             "Ze is een hulpmiddel: Goed zegt wat je zo houdt, Werkpunten wat je nog eens "
-            "bekijkt voor een volgend verslag of een test. Je score komt van je lector, "
-            "nooit van de AI. Vermoed je een fout in de feedback? Dan mag je altijd om "
+            "bekijkt voor een volgend verslag of een test. Een score geeft alleen je "
+            "lector, nooit de AI. Vermoed je een fout in de feedback? Dan mag je altijd om "
             "manuele feedback vragen."
         ),
     },
