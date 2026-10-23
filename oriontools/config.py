@@ -119,6 +119,21 @@ STANDAARD = {
         # van een datasheet: wat een student in een tool opent.
         "start_exts": [],
     },
+    "feedback": {
+        # feedback-json zet dit onder elke feedback die naar een student gaat, na een
+        # lege regel. De student hoort te weten dat AI meeschreef en wat hij kan doen
+        # als hij de feedback niet vertrouwt (lector DeN, 23 oktober 2026). Het staat
+        # niet in de spreadsheet, zodat de lector het niet per rij naleest en een
+        # ongewijzigd voorstel ongewijzigd blijft. Er staat niet in dat de lector alles
+        # naleest: dat doet hij niet altijd. Leeg: geen vermelding.
+        "vermelding": (
+            "Deze feedback is opgesteld met behulp van AI. "
+            "Ze is een hulpmiddel: Goed zegt wat je zo houdt, Werkpunten wat je nog eens "
+            "bekijkt voor een volgend verslag of een test. Je score komt van je lector, "
+            "nooit van de AI. Vermoed je een fout in de feedback? Dan mag je altijd om "
+            "manuele feedback vragen."
+        ),
+    },
     # De koppeling met ANS (oriontools/ans/). 0 is niet ingesteld; ans-verken
     # toont welke id's je token ziet. Een vragenbank staat hier niet: elke
     # vragenpagina krijgt haar eigen bank. Het token staat nooit hier: zie

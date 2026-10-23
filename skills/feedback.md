@@ -1,4 +1,4 @@
-# orion-feedback: short feedback on submitted reports, for the lecturer to approve
+# orion-feedback: short feedback on submitted reports, published on the lecturer's word
 
 The shared procedure behind every course's `orion-feedback` skill. The skill in a course
 (`.claude/skills/orion-feedback/SKILL.md`) points here and adds its course id and which
@@ -6,9 +6,15 @@ assignments have a report; read both.
 
 The lecturer asks for feedback on a dropbox ("geef feedback op de verslagen van RS485"). You write,
 per student, what is good and what to work on, in a few lines. **You never give a score**, and
-nothing reaches a student before the lecturer has read it. The decisions behind this (interview of
-23 October 2026): the lecturer reads every proposal, the yardstick is the model answer plus general
-quality, it runs in a session and not through the API, and the cover page goes before you read.
+nothing reaches a student before the lecturer has said so. The decisions behind this (interview of
+23 October 2026): the yardstick is the model answer plus general quality, it runs in a session and
+not through the API, and the cover page goes before you read.
+
+**The lecturer skims the proposals at most and does not check each one** (later the same day). So a
+proposal has to be right without a second reader: what you cannot judge goes in the note, never in
+the feedback, and every point must hold against the answer file and the student's own screenshot.
+The student is told under every feedback that AI wrote it (`feedback.vermelding` in
+`oriontools/config.py`), and may always ask for manual feedback.
 
 ## 1. Fetch and anonymise
 
@@ -109,11 +115,14 @@ rewrite approved ones.
 submission in `OVERZICHT.md` (docx, pdf, code only). The lecturer judges them, and what they change
 goes into the notes file (step 2) before you write the rest.
 
-## 6. The lecturer reads, then it is published
+## 6. The lecturer looks, then it is published
+
+The pilot is the lecturer's real check; after it, the spreadsheet gets a skim. Point the lecturer to the codes
+with a `Voor de lector` note: those are the ones only the lecturer can settle.
 
 ```
 python ../OrionTools/orion.py feedback-spreadsheet _feedback/<map>   # voorstellen.md -> feedback.xlsx, names back
-#   the lecturer edits the column Feedback; an empty cell sends nothing
+#   the lecturer may edit the column Feedback; an empty cell sends nothing
 python ../OrionTools/orion.py feedback-json _feedback/<map>          # feedback.xlsx -> feedback.json + correcties.md
 # in OrionSync: dry run first, --apply only on the lecturer's word
 npm run dropbox -- feedback <orgUnitId> <folderId> --in ../<Vak>/_feedback/<map>/feedback.json

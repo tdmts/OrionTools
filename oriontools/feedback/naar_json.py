@@ -11,7 +11,8 @@ Leest <map>/feedback.xlsx en schrijft twee bestanden:
 
 decision is "voorstel" als de lector de tekst liet staan, "aangepast" als hij
 hem veranderde en "leeg" als hij de cel leegmaakte. OrionSync stuurt het niet
-mee; het telt ze in zijn proefdraai. Een lege cel slaat OrionSync over.
+mee; het telt ze in zijn proefdraai. Een lege cel slaat OrionSync over. Onder
+elke feedback die verstuurd wordt, zet het feedback.vermelding uit de config.
 
 correcties.md is wat Claude leest om de notities bij een opdracht voor te
 stellen (stap 7 van de skill): het verschil zonder de namen, die in
@@ -63,6 +64,7 @@ def main(argv):
     sleutel = json.loads((map_ / "sleutel.json").read_text(encoding="utf-8"))["codes"]
     namen = Namen(json.loads((map_ / "inzendingen.json").read_text(encoding="utf-8"))["students"])
 
+    vermelding = vak.config["feedback"]["vermelding"].strip()
     items, correcties, fout = [], [], []
     tel = {"voorstel": 0, "aangepast": 0, "leeg": 0}
     for naam, code, voorstel, feedback, *_ in rijen[1:]:
@@ -75,7 +77,8 @@ def main(argv):
         feedback = (feedback or "").strip()
         beslissing = "leeg" if not feedback else "voorstel" if gelijk(feedback, voorstel) else "aangepast"
         tel[beslissing] += 1
-        items.append({"id": wie["id"], "name": naam, "decision": beslissing, "feedback": feedback})
+        verstuurd = f"{feedback}\n\n{vermelding}" if feedback and vermelding else feedback
+        items.append({"id": wie["id"], "name": naam, "decision": beslissing, "feedback": verstuurd})
         if beslissing != "voorstel":
             correcties.append(f"## {code} ({beslissing})\n\nVoorstel:\n\n{voorstel}\n\n"
                               f"Lector:\n\n{namen(feedback) or '(niets gestuurd)'}\n")

@@ -200,7 +200,9 @@ class Spreadsheet(Basis):
         self.assertEqual(per["Zoë Wouters"]["decision"], "aangepast")
         self.assertEqual(per["Zoë Wouters"]["id"], 10)
         self.assertEqual(per["Adam Claes"]["decision"], "leeg")
-        self.assertEqual(per["Adam Claes"]["feedback"], "")
+        self.assertEqual(per["Adam Claes"]["feedback"], "")    # leeg: ook geen vermelding
+        self.assertTrue(per["Zoë Wouters"]["feedback"].startswith("Goed\n"))
+        self.assertTrue(per["Zoë Wouters"]["feedback"].endswith("om manuele feedback vragen."))
         correcties = (self.map / "correcties.md").read_text(encoding="utf-8")
         self.assertIn("## S01 (aangepast)", correcties)
         self.assertIn("juist, [naam].", correcties)
