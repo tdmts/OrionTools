@@ -44,6 +44,15 @@ laatste inzending met code. Een zip wordt uitgepakt.
 Een tweede run houdt de codes: sleutel.json wordt aangevuld, niet herschreven.
 Zo kan een dropbox in golven vollopen, groep na groep.
 
+Een tweede run zegt ook wat er sinds de vorige veranderd is. Per code staat in
+<map>/vingerafdrukken.json een hash van wat er gelezen werd (de inhoud van de
+gekozen bestanden en de opmerking, niet hun naam), en OVERZICHT.md zet in de
+kolom Sinds vorige run "nieuw" bij een code die er de vorige keer niet was en
+"gewijzigd" bij een student die opnieuw indiende. Een gewijzigde code heeft in
+voorstellen.md een sectie over een verslag dat niet meer bestaat: die schrijf
+je opnieuw. De eerste run met dit bestand laat de kolom leeg, want er is niets
+om mee te vergelijken.
+
 Git moet de map negeren, want OrionSync spiegelt wat getrackt is naar de
 cursus. Zonder die regel weigert het commando.
 """
@@ -472,7 +481,8 @@ def verwerk(student, map_, namen, sjabloon=frozenset()):
             lijst.append(f"- [code/{doel}](code/{doel})")
         delen.append("# Code\n\n" + "\n".join(lijst))
 
-    opmerkingen = [namen(s["text"]) for s in sorted(student["submissions"], key=lambda s: s["date"]) if s["text"]]
+    teksten = [s["text"] for s in sorted(student["submissions"], key=lambda s: s["date"]) if s["text"]]
+    opmerkingen = [namen(t) for t in teksten]
     if opmerkingen:
         delen.append("# Opmerking bij de inzending\n\n" + "\n\n".join(opmerkingen))
 
@@ -486,7 +496,19 @@ def verwerk(student, map_, namen, sjabloon=frozenset()):
         "namen": namen.aantal - voor,
         "onleesbaar": onleesbaar,
         "feedback": bool(student.get("feedback")),
+        "vingerafdruk": vingerafdruk(gekozen, teksten),
     }
+
+
+def vingerafdruk(gekozen, teksten):
+    """Een hash van wat er gelezen werd: de inhoud per soort, niet de bestandsnaam."""
+    h = hashlib.sha256()
+    for s in sorted(gekozen):
+        for d in sorted(hashlib.sha256(data).hexdigest() for _, data in gekozen[s]):
+            h.update(f"{s}:{d}\n".encode())
+    for t in teksten:
+        h.update(f"tekst:{t}\n".encode("utf-8"))
+    return h.hexdigest()
 
 
 # ---- sleutel en overzicht ------------------------------------------------------
@@ -506,10 +528,11 @@ def codes(sleutel, studenten):
 
 
 def overzicht(map_, regels, folder):
-    kop = ("| Code | Verslag | Voorblad | Afb. | Niet omgezet | Code | Namen vervangen | Al feedback | Onleesbaar |\n"
-           "| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    kop = ("| Code | Verslag | Voorblad | Afb. | Niet omgezet | Code | Namen vervangen | Al feedback | Onleesbaar "
+           "| Sinds vorige run |\n"
+           "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     rijen = [f"| {c} | {r['verslag']} | {r['voorblad']} | {r['afbeeldingen']} | {r['niet_omgezet']} | {r['code']} "
-             f"| {r['namen']} | {'ja' if r['feedback'] else ''} | {', '.join(r['onleesbaar'])} |"
+             f"| {r['namen']} | {'ja' if r['feedback'] else ''} | {', '.join(r['onleesbaar'])} | {r.get('sinds', '')} |"
              for c, r in regels]
     tekst = (f"# {folder}\n\nWat feedback-voorbereiden per code vond. Wie niets indiende, staat er niet in.\n\n"
              + kop + "\n" + "\n".join(rijen) + "\n")
@@ -560,11 +583,30 @@ def main(argv):
     for s in sorted(ingediend, key=lambda s: per_id[str(s["id"])]):
         code = per_id[str(s["id"])]
         regels.append((code, verwerk(s, anoniem / code, namen, sjabloon)))
+
+    afdrukpad = map_ / "vingerafdrukken.json"
+    vorige = json.loads(afdrukpad.read_text(encoding="utf-8")) if afdrukpad.exists() else None
+    for code, r in regels:
+        if vorige is not None:
+            r["sinds"] = ("nieuw" if code not in vorige
+                          else "gewijzigd" if vorige[code] != r["vingerafdruk"] else "")
+    afdrukken = dict(vorige or {})
+    afdrukken.update({code: r["vingerafdruk"] for code, r in regels})
+    afdrukpad.write_text(json.dumps(afdrukken, indent=1, sort_keys=True), encoding="utf-8")
     overzicht(anoniem, regels, data["folder"]["name"])
 
     zonder = [c for c, r in regels if r["verslag"] == "geen"]
     deels = [c for c, r in regels if r["voorblad"] != "-" and not r["voorblad"].startswith("weggelaten")]
     print(f"{len(regels)} inzendingen anoniem in {anoniem.relative_to(vak.root)}")
+    if vorige is None:
+        print("  eerste vingerafdruk: vanaf de volgende run zegt OVERZICHT.md wat nieuw en gewijzigd is")
+    else:
+        nieuw = [c for c, r in regels if r["sinds"] == "nieuw"]
+        gewijzigd = [c for c, r in regels if r["sinds"] == "gewijzigd"]
+        print(f"  sinds de vorige run: {len(nieuw)} nieuw{': ' + ', '.join(nieuw) if nieuw else ''}, "
+              f"{len(gewijzigd)} gewijzigd{': ' + ', '.join(gewijzigd) if gewijzigd else ''}")
+        if gewijzigd:
+            print("  een gewijzigde code: schrijf haar sectie in voorstellen.md opnieuw")
     if zonder:
         print(f"  zonder verslag: {', '.join(zonder)}")
     if deels:

@@ -107,4 +107,9 @@ def main(argv):
     wb.save(uit)
     print(f"{len(rijen)} rijen in {uit.relative_to(vak.root)}. Pas de kolom Feedback aan; "
           f"een lege cel stuurt niets. Daarna: orion.py feedback-json {args.map}")
+    # feedback-json zet de versie van de lector terug in voorstellen.md, met de
+    # namen vervangen; zo'n tekst mag niet ongezien als "[naam]" vertrekken.
+    met_naam = sorted(r[1] for r in rijen if "[naam]" in (r[3] or ""))
+    if met_naam:
+        print(f"  [naam] in de feedback van {', '.join(met_naam)}: vul de naam in of pas de zin aan")
     return 0

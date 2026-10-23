@@ -18,6 +18,14 @@ correcties.md is wat Claude leest om de notities bij een opdracht voor te
 stellen (stap 7 van de skill): het verschil zonder de namen, die in
 feedback.xlsx staan en die Claude niet opent.
 
+Wat de lector veranderde, gaat ook terug in voorstellen.md, met de namen
+vervangen zoals in correcties.md. Een volgende ronde bouwt de spreadsheet
+opnieuw uit voorstellen.md (feedback-spreadsheet --opnieuw), en zonder die
+stap zou de versie van de lector daar verdwijnen en het voorstel opnieuw
+klaarstaan. Een cel die de lector leegmaakte, wordt een sectie zonder tekst,
+met "De lector stuurde niets." in de regel Voor de lector: de sectie bestaat
+dus, zodat ze niet opnieuw geschreven wordt, en ze stuurt niets.
+
 Daarna, in OrionSync, eerst zonder --apply:
 
     npm run dropbox -- feedback <orgUnitId> <folderId> --in ../<Vak>/<map>/feedback.json
@@ -25,15 +33,56 @@ Daarna, in OrionSync, eerst zonder --apply:
 
 import argparse
 import json
+import re
 import sys
 
 from .. import repo
 from .spreadsheet import KOLOMMEN
 from .voorbereiden import Namen
 
+NIETS = "De lector stuurde niets."
+
 
 def gelijk(a, b):
     return " ".join((a or "").split()) == " ".join((b or "").split())
+
+
+def terugzetten(pad, versies):
+    """Zet {code: tekst van de lector} in voorstellen.md; een lege tekst is 'niets sturen'.
+
+    Geeft de codes terug die veranderd zijn. De regel Voor de lector blijft staan.
+    """
+    if not versies or not pad.is_file():
+        return []
+    tekst = pad.read_text(encoding="utf-8")
+    secties = list(re.finditer(r"^## (S\d+)[ \t]*\n(.*?)(?=^## S\d+[ \t]*\n|\Z)", tekst, re.S | re.M))
+    uit, vorig, veranderd = [], 0, []
+    for m in secties:
+        uit.append(tekst[vorig:m.start()])
+        vorig = m.end()
+        code = m.group(1)
+        if code not in versies:
+            uit.append(m.group(0))
+            continue
+        body = m.group(2).strip()
+        noot = ""
+        n = re.search(r"^Voor de lector:\s*(.*?)\s*\Z", body, re.S | re.M)
+        if n:
+            noot, body = n.group(1).strip(), body[:n.start()].strip()
+        nieuw = versies[code].replace("\r\n", "\n").strip()
+        if not nieuw and not noot.startswith(NIETS):
+            noot = f"{NIETS} {noot}".strip()
+        delen = [f"## {code}\n"] + ([nieuw + "\n"] if nieuw else []) + ([f"Voor de lector: {noot}\n"] if noot else [])
+        nieuwe_sectie = "\n".join(delen) + "\n"
+        if gelijk(nieuwe_sectie, m.group(0)):
+            uit.append(m.group(0))      # niets veranderd: laat de sectie byte voor byte staan
+            continue
+        veranderd.append(code)
+        uit.append(nieuwe_sectie)
+    uit.append(tekst[vorig:])
+    if veranderd:
+        pad.write_text("".join(uit), encoding="utf-8")
+    return veranderd
 
 
 def main(argv):
@@ -65,7 +114,7 @@ def main(argv):
     namen = Namen(json.loads((map_ / "inzendingen.json").read_text(encoding="utf-8"))["students"])
 
     vermelding = vak.config["feedback"]["vermelding"].strip()
-    items, correcties, fout = [], [], []
+    items, correcties, fout, versies = [], [], [], {}
     tel = {"voorstel": 0, "aangepast": 0, "leeg": 0}
     for naam, code, voorstel, feedback, *_ in rijen[1:]:
         if not code:
@@ -80,6 +129,7 @@ def main(argv):
         verstuurd = f"{feedback}\n\n{vermelding}" if feedback and vermelding else feedback
         items.append({"id": wie["id"], "name": naam, "decision": beslissing, "feedback": verstuurd})
         if beslissing != "voorstel":
+            versies[code] = namen(feedback)
             correcties.append(f"## {code} ({beslissing})\n\nVoorstel:\n\n{voorstel}\n\n"
                               f"Lector:\n\n{namen(feedback) or '(niets gestuurd)'}\n")
     if fout:
@@ -92,8 +142,11 @@ def main(argv):
         f"# Correcties: {info.get('dropbox', '')}\n\n"
         f"{tel['voorstel']} ongewijzigd, {tel['aangepast']} aangepast, {tel['leeg']} leeggemaakt.\n\n"
         + "\n".join(correcties), encoding="utf-8")
+    teruggezet = terugzetten(map_ / "voorstellen.md", versies)
     print(f"{len(items)} rijen: {tel['voorstel']} ongewijzigd, {tel['aangepast']} aangepast, "
           f"{tel['leeg']} leeg. Geschreven: feedback.json en correcties.md.")
+    if teruggezet:
+        print(f"  de versie van de lector staat nu ook in voorstellen.md: {', '.join(teruggezet)}")
     print(f"Proefdraai in OrionSync: npm run dropbox -- feedback {info['orgUnitId']} {info['folderId']} "
           f"--in {map_ / 'feedback.json'}")
     return 0

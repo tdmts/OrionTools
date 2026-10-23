@@ -139,6 +139,30 @@ class FeedbackVoorbereiden(Basis):
         self.assertEqual(sleutel["S01"]["id"], 20)
         self.assertEqual(sleutel["S02"]["id"], 5)
 
+    def test_goed_tweede_run_zegt_wat_nieuw_en_gewijzigd_is(self):
+        self.student(20, "Zoë Wouters", [("v.docx", verslag("x"))])
+        uit = self.draai()
+        self.assertIn("eerste vingerafdruk", uit)
+        self.assertNotIn("nieuw |", (self.map / "anoniem" / "OVERZICHT.md").read_text(encoding="utf-8"))
+
+        self.student(5, "Adam Claes", [("v.docx", verslag("y"))])
+        uit = self.draai()
+        self.assertIn("1 nieuw: S02, 0 gewijzigd", uit)
+
+        zoe = self.studenten[0]
+        pad = self.map / "bestanden" / "Zoë Wouters" / "1-v2.docx"
+        pad.write_bytes(verslag("x, verbeterd"))
+        zoe["submissions"].append({"id": 1, "date": "2026-10-09T10:00:00Z", "text": "",
+                                   "files": [{"id": 1, "name": "v2.docx", "size": 1, "saved": str(pad)}]})
+        uit = self.draai()
+        self.assertIn("0 nieuw, 1 gewijzigd: S01", uit)
+        overzicht = (self.map / "anoniem" / "OVERZICHT.md").read_text(encoding="utf-8")
+        self.assertIn("| gewijzigd |", overzicht)
+        self.assertIn("Sinds vorige run", overzicht)
+
+        uit = self.draai()                                    # niets veranderd
+        self.assertIn("0 nieuw, 0 gewijzigd", uit)
+
     def test_goed_wie_niets_indiende_krijgt_geen_code(self):
         self.student(10, "Emma Roose", [("v.docx", verslag("x"))])
         self.student(11, "Lucas Peeters")
@@ -208,6 +232,27 @@ class Spreadsheet(Basis):
         self.assertIn("juist, [naam].", correcties)
         self.assertNotIn("Zoë", correcties)
         self.assertNotIn("Adam", correcties)
+
+        # De versie van de lector staat nu in voorstellen.md, zonder namen.
+        voorstellen = (self.map / "voorstellen.md").read_text(encoding="utf-8")
+        self.assertIn("- Vraag 3: juist, [naam].", voorstellen)
+        self.assertIn("Voor de lector: foto gedraaid.", voorstellen)
+        self.assertIn("## S02\n\nVoor de lector: De lector stuurde niets.", voorstellen)
+        self.assertNotIn("Vraag 2: fout", voorstellen)
+        self.assertTrue(voorstellen.startswith("# Voorstellen\n\n## S01"))
+
+        # Nog eens draaien verandert niets.
+        self.commando(naar_json)
+        self.assertEqual((self.map / "voorstellen.md").read_text(encoding="utf-8"), voorstellen)
+
+        # Een volgende ronde begint van de versie van de lector.
+        uit = self.commando(spreadsheet, "--opnieuw")
+        self.assertIn("[naam] in de feedback van S01", uit)
+        rijen = {r[1]: r for r in load_workbook(self.map / "feedback.xlsx")["Feedback"]
+                 .iter_rows(min_row=2, values_only=True)}
+        self.assertIn("juist, [naam].", rijen["S01"][3])
+        self.assertFalse(rijen["S02"][3])
+        self.assertEqual(rijen["S02"][4], "De lector stuurde niets.")
 
     def test_fout_bestaande_spreadsheet_niet_overschrijven(self):
         from oriontools.feedback import spreadsheet
