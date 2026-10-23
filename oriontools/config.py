@@ -34,13 +34,14 @@ STANDAARD = {
         "datasheets": "datasheets",
         "oplossingen": "_oplossingen",
         "toets": "_toets",           # export-qti; git moet de map negeren
+        "feedback": "_feedback",     # feedback-voorbereiden; git moet de map negeren
         "incoming": "_incoming",
         "export": "_export",
         "startbestanden": "startbestanden",
     },
-    # Mappen die de check overslaat: ruwe import, eigen uitvoer, oplossingen, toetsen.
-    # Waarom: zie Context.overgeslagen in check/context.py.
-    "staging": ["_incoming", "_export", "_oplossingen", "_toets"],
+    # Mappen die de check overslaat: ruwe import, eigen uitvoer, oplossingen, toetsen,
+    # ingediende verslagen. Waarom: zie Context.overgeslagen in check/context.py.
+    "staging": ["_incoming", "_export", "_oplossingen", "_toets", "_feedback"],
     # Pagina's in de repo die geen pagina van de site zijn.
     "exempt_pages": ["pasteInOrion.html", "template.html"],
     # Mappen met html die geen sitepagina is (een deck laadt geen OrionCSS).

@@ -94,6 +94,8 @@ class Context:
         lezen. _oplossingen houdt modeloplossingen die .gitignore buiten git
         houdt: OrionSync spiegelt ze nooit, dus er is niets om na te kijken.
         _toets houdt toetsvragen voor export-qti, om dezelfde reden buiten git.
+        _feedback houdt ingediende verslagen met namen van studenten, voor
+        feedback-voorbereiden: die horen niet in git en zijn niet van ons.
         _export is eigen uitvoer. De lijst is config "staging".
         """
         delen = pad.relative_to(self.root).parts
