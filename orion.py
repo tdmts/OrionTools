@@ -35,6 +35,8 @@ COMMANDOS = {
     "ans-dekking": ("oriontools.ans.dekking", "verouderde items in ANS en theorie zonder vraag"),
     "ans-toets": ("oriontools.ans.toets", "de toets van een labo in ANS, met de instellingen uit oriontools.json"),
     "feedback-voorbereiden": ("oriontools.feedback.voorbereiden", "de verslagen van een dropbox anoniem, om feedback op te schrijven"),
+    "feedback-spreadsheet": ("oriontools.feedback.spreadsheet", "de feedbackvoorstellen in een spreadsheet, met de namen erbij"),
+    "feedback-json": ("oriontools.feedback.naar_json", "de spreadsheet van de lector naar de JSON van npm run dropbox"),
 }
 
 

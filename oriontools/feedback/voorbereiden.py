@@ -11,7 +11,8 @@ Dit commando schrijft ernaast:
     <map>/sleutel.json              welke code (S01, S02 ...) bij welke student hoort
     <map>/anoniem/OVERZICHT.md      per code wat er gevonden en weggelaten is
     <map>/anoniem/S01/verslag.md    het verslag zonder voorblad, als tekst
-    <map>/anoniem/S01/img/          de afbeeldingen, in de volgorde van het verslag
+    <map>/anoniem/S01/img/          de afbeeldingen, in de volgorde van het verslag; een
+                                    figuur die ook in het sjabloon staat, wordt alleen genoemd
     <map>/anoniem/S01/code/         de code die de student indiende
 
 Claude stelt feedback voor op wat in anoniem/ staat en leest de rest van de map
@@ -48,6 +49,7 @@ cursus. Zonder die regel weigert het commando.
 """
 
 import argparse
+import hashlib
 import io
 import json
 import re
@@ -72,6 +74,7 @@ W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 V = "{urn:schemas-microsoft-com:vml}"
+WP = "{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}"
 MC_FALLBACK = "{http://schemas.openxmlformats.org/markup-compatibility/2006}Fallback"
 PAGINA = "\x0c"             # paginaeinde in de tekst van een alinea
 VINKJES = {"F0FD": "☒", "F0FE": "☒", "F078": "☒", "F0A8": "☐", "F06F": "☐"}
@@ -188,14 +191,17 @@ def ontdubbel(lijst):
 # ---- afbeeldingen ----------------------------------------------------------
 
 class Beelden:
-    def __init__(self, map_):
+    def __init__(self, map_, sjabloon=frozenset()):
         self.map = map_
+        self.sjabloon = sjabloon
         self.n = 0
         self.niet = 0
 
     def bewaar(self, data, ext):
         """Schrijf een afbeelding zonder metadata, zo nodig kleiner; geef de markdown terug."""
         from PIL import Image
+        if hashlib.sha256(data).hexdigest() in self.sjabloon:
+            return "[figuur uit het sjabloon]"
         ext = ext.lower()
         if ext not in BEELD:
             self.niet += 1
@@ -272,9 +278,20 @@ class Docx:
                 uit.append(" " + self.beeld(kind.get(R + "embed")) + " ")
             elif t == V + "imagedata":
                 uit.append(" " + self.beeld(kind.get(R + "id")) + " ")
+            elif t in (WP + "anchor", WP + "inline") and not self.inhoud(kind):
+                # Een vorm die de student tekende, zonder tekst of afbeelding erin:
+                # een kruisje of een cirkel in een vak van de pintabel (RS485,
+                # oktober 2026). Weglaten zou een ingevulde tabel leeg tonen.
+                uit.append(" [vorm] ")
             else:
                 self.tekst(kind, uit)
         return uit
+
+    @staticmethod
+    def inhoud(tekening):
+        """Draagt een tekening een afbeelding of tekst die tekst() zelf vindt?"""
+        return (next(tekening.iter(A + "blip"), None) is not None
+                or next(tekening.iter(W + "t"), None) is not None)
 
     def alinea(self, p):
         stijl = p.find(f"{W}pPr/{W}pStyle")
@@ -391,14 +408,29 @@ def veilig(naam):
     return re.sub(r"[^\w.\-\[\]]+", "_", naam).strip("_") or "bestand"
 
 
-def verwerk(student, map_, namen):
+def sjabloonbeelden(pad):
+    """De afbeeldingen van het verslagsjabloon, als sha256.
+
+    Het sjabloon draagt de figuren van de opdracht zelf (de schakeling van
+    deel 2, die van deel 3). In een ingediend verslag zijn dat geen
+    schermafdrukken van de student, en wie ze toch leest als werk van de
+    student, beoordeelt de opdracht in plaats van het antwoord.
+    """
+    if not pad.is_file():
+        return frozenset()
+    with zipfile.ZipFile(pad) as z:
+        return frozenset(hashlib.sha256(z.read(n)).hexdigest()
+                         for n in z.namelist() if n.startswith("word/media/"))
+
+
+def verwerk(student, map_, namen, sjabloon=frozenset()):
     """Schrijf de anonieme versie van één student; geef de regel voor het overzicht terug."""
     if map_.exists():
         shutil.rmtree(map_)
     map_.mkdir(parents=True)
     voor = namen.aantal
     gekozen, onleesbaar = kies(student)
-    beelden = Beelden(map_ / "img")
+    beelden = Beelden(map_ / "img", sjabloon)
     delen, soorten, voorbladen = [], [], []
 
     verslagen = gekozen.get("verslag", [])
@@ -523,10 +555,11 @@ def main(argv):
 
     anoniem = map_ / "anoniem"
     anoniem.mkdir(exist_ok=True)
+    sjabloon = sjabloonbeelden(vak.pad("downloads") / f"{map_.name}-verslag.docx")
     regels = []
     for s in sorted(ingediend, key=lambda s: per_id[str(s["id"])]):
         code = per_id[str(s["id"])]
-        regels.append((code, verwerk(s, anoniem / code, namen)))
+        regels.append((code, verwerk(s, anoniem / code, namen, sjabloon)))
     overzicht(anoniem, regels, data["folder"]["name"])
 
     zonder = [c for c, r in regels if r["verslag"] == "geen"]

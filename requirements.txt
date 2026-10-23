@@ -5,3 +5,4 @@ pillow
 pypdf
 reportlab
 pypdfium2
+openpyxl
