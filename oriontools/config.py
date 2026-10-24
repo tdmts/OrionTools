@@ -137,6 +137,15 @@ STANDAARD = {
             "lector, nooit de AI. Vermoed je een fout in de feedback? Dan mag je altijd om "
             "manuele feedback vragen."
         ),
+        # Wat een student krijgt die het lege sjabloon indiende: feedback-voorbereiden
+        # herkent zo'n verslag (geen regel en geen afbeelding die niet in het sjabloon
+        # staat) en zet deze tekst in OVERZICHT.md. Ze komt zonder Goed en Werkpunten,
+        # want er valt niets te beoordelen, en feedback-json zet er de vermelding niet
+        # onder: er heeft geen AI iets beoordeeld (lector ICEES, 24 oktober 2026).
+        "leeg_sjabloon": (
+            "Je hebt het lege sjabloon ingediend: er staat geen enkel antwoord in. "
+            "Dien het ingevulde verslag in deze dropbox in."
+        ),
     },
     # De koppeling met ANS (oriontools/ans/). 0 is niet ingesteld; ans-verken
     # toont welke id's je token ziet. Een vragenbank staat hier niet: elke

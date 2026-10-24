@@ -130,6 +130,27 @@ class FeedbackVoorbereiden(Basis):
         self.assertIn("[figuur uit het sjabloon]", self.md("S01"))
         self.assertFalse((self.map / "anoniem" / "S01" / "img").exists())
 
+    def test_goed_leeg_sjabloon_wordt_herkend(self):
+        sjabloon = self.root / "downloads" / "Labo-RS485-verslag.docx"
+        sjabloon.parent.mkdir()
+        sjabloon.write_bytes(verslag(""))
+        self.student(10, "Emma Roose", [("v.docx", verslag(""))])
+        self.student(11, "Lucas Peeters", [("v.docx", verslag("A en B"))])
+        self.student(12, "Zoë Wouters", [("v.docx", verslag("", figuur=True))])   # eigen afbeelding
+        uit = self.draai()
+        overzicht = (self.map / "anoniem" / "OVERZICHT.md").read_text(encoding="utf-8")
+        self.assertIn("| S01 | docx, leeg sjabloon |", overzicht)
+        self.assertIn("| S02 | docx |", overzicht)
+        self.assertIn("| S03 | docx |", overzicht)
+        self.assertIn("## Leeg sjabloon: S01\n", overzicht)
+        self.assertIn("> Je hebt het lege sjabloon ingediend", overzicht)
+        self.assertIn("leeg sjabloon: S01;", uit)
+
+    def test_goed_zonder_sjabloon_niets_leeg(self):
+        self.student(10, "Emma Roose", [("v.docx", verslag(""))])
+        self.draai()
+        self.assertNotIn("leeg sjabloon", (self.map / "anoniem" / "OVERZICHT.md").read_text(encoding="utf-8"))
+
     def test_goed_codes_blijven_bij_een_tweede_run(self):
         self.student(20, "Zoë Wouters", [("v.docx", verslag("x"))])
         self.draai()
@@ -260,6 +281,18 @@ class Spreadsheet(Basis):
         with self.assertRaises(SystemExit):
             self.commando(spreadsheet)
         self.commando(spreadsheet, "--opnieuw")
+
+    def test_goed_leeg_sjabloon_zonder_vermelding(self):
+        from oriontools.config import STANDAARD
+        from oriontools.feedback import naar_json, spreadsheet
+        leeg = STANDAARD["feedback"]["leeg_sjabloon"]
+        (self.map / "voorstellen.md").write_text(
+            self.VOORSTELLEN.split("## S02")[0] + f"## S02\n\n{leeg}\n", encoding="utf-8")
+        self.commando(spreadsheet)
+        self.commando(naar_json)
+        per = {i["name"]: i for i in json.loads((self.map / "feedback.json").read_text(encoding="utf-8"))["items"]}
+        self.assertEqual(per["Adam Claes"]["feedback"], leeg)
+        self.assertTrue(per["Zoë Wouters"]["feedback"].endswith("om manuele feedback vragen."))
 
     def test_fout_verschoven_rij(self):
         from openpyxl import load_workbook

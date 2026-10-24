@@ -37,6 +37,12 @@ the names, and the point of the whole step is that you do not see them. Start wi
 `anoniem/OVERZICHT.md`. A code whose cover page was not recognised (`geen voorblad gevonden`,
 `deels`) is one the lecturer looks at before you read it; ask with AskUserQuestion.
 
+**A code marked `leeg sjabloon` handed in the template without a single answer.** Do not read it:
+its section in `voorstellen.md` is the text OVERZICHT.md quotes under `## Leeg sjabloon`, verbatim,
+with no Goed and no Werkpunten (`feedback.leeg_sjabloon` in the config). `feedback-json` sends that
+text without the AI notice, because nothing was judged (the lecturer of ICEES, 24 October 2026). It
+is not part of the pilot.
+
 ## 2. Read the yardstick first
 
 Before a single report:
@@ -72,7 +78,7 @@ Werkpunten
 ```
 
 - **One to three points under each heading**, one sentence each. A point about a question starts
-  with `Vraag N:`.
+  with `Vraag N:`. A `leeg sjabloon` has no headings at all (step 1).
 - **Werkpunten in order of weight**: a content error before a missing answer, a missing answer
   before a missing screenshot, all of those before form.
 - **Say what is wrong and why.** The right answer may follow when it fits in the same sentence;

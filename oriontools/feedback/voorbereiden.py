@@ -53,6 +53,15 @@ voorstellen.md een sectie over een verslag dat niet meer bestaat: die schrijf
 je opnieuw. De eerste run met dit bestand laat de kolom leeg, want er is niets
 om mee te vergelijken.
 
+Een student die het lege sjabloon indient, krijgt geen feedback op inhoud
+(ICEES, Linux Basis, 24 oktober 2026). Het verslag wordt naast het sjabloon in
+downloads/ gelegd, door dezelfde omzetting: staat er geen regel in die niet ook
+in het sjabloon staat, geen afbeelding van de student, geen code en geen
+opmerking, dan zet OVERZICHT.md "leeg sjabloon" bij de code, met de tekst
+feedback.leeg_sjabloon uit de config eronder. Die tekst is het hele voorstel.
+Een sjabloon van een vorig jaar, of een pdf, valt er niet onder: dan leest
+Claude het verslag gewoon, en dat kost alleen tijd.
+
 Git moet de map negeren, want OrionSync spiegelt wat getrackt is naar de
 cursus. Zonder die regel weigert het commando.
 """
@@ -65,6 +74,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -432,7 +442,24 @@ def sjabloonbeelden(pad):
                          for n in z.namelist() if n.startswith("word/media/"))
 
 
-def verwerk(student, map_, namen, sjabloon=frozenset()):
+def tekstregels(md):
+    """De regels van een verslag die iets dragen, met de witruimte samengevouwen."""
+    return {" ".join(r.split()) for r in md.splitlines() if r.strip()}
+
+
+def sjabloontekst(pad, namen, sjabloon):
+    """De regels van het verslagsjabloon, door dezelfde omzetting als een ingediend verslag.
+
+    None als er geen sjabloon is: dan wordt niets als leeg sjabloon herkend.
+    """
+    if not pad.is_file():
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        md, _ = Docx(pad.read_bytes(), Beelden(Path(tmp), sjabloon), namen).markdown()
+    return tekstregels(md)
+
+
+def verwerk(student, map_, namen, sjabloon=frozenset(), sjabloonregels=None):
     """Schrijf de anonieme versie van één student; geef de regel voor het overzicht terug."""
     if map_.exists():
         shutil.rmtree(map_)
@@ -487,7 +514,13 @@ def verwerk(student, map_, namen, sjabloon=frozenset()):
         delen.append("# Opmerking bij de inzending\n\n" + "\n\n".join(opmerkingen))
 
     (map_ / "verslag.md").write_text("\n\n".join(delen) + "\n", encoding="utf-8")
+    # Het lege sjabloon: een docx zonder regel, afbeelding, code of opmerking die niet
+    # ook in het sjabloon staat.
+    leeg = (sjabloonregels is not None and len(gelezen) == 1 and gelezen[0][1] == ".docx"
+            and beelden.n == 0 and beelden.niet == 0 and not code and not opmerkingen
+            and tekstregels(gelezen[0][2]) <= sjabloonregels)
     return {
+        "leeg": leeg,
         "verslag": "+".join(soorten) or "geen",
         "voorblad": "; ".join(voorbladen) or "-",
         "afbeeldingen": beelden.n,
@@ -527,15 +560,27 @@ def codes(sleutel, studenten):
     return per_id
 
 
-def overzicht(map_, regels, folder):
+def overzicht(map_, regels, folder, leeg_tekst=""):
     kop = ("| Code | Verslag | Voorblad | Afb. | Niet omgezet | Code | Namen vervangen | Al feedback | Onleesbaar "
            "| Sinds vorige run |\n"
            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
-    rijen = [f"| {c} | {r['verslag']} | {r['voorblad']} | {r['afbeeldingen']} | {r['niet_omgezet']} | {r['code']} "
+    rijen = [f"| {c} | {r['verslag']}{', leeg sjabloon' if r.get('leeg') else ''} | {r['voorblad']} | {r['afbeeldingen']} | {r['niet_omgezet']} | {r['code']} "
              f"| {r['namen']} | {'ja' if r['feedback'] else ''} | {', '.join(r['onleesbaar'])} | {r.get('sinds', '')} |"
              for c, r in regels]
     tekst = (f"# {folder}\n\nWat feedback-voorbereiden per code vond. Wie niets indiende, staat er niet in.\n\n"
              + kop + "\n" + "\n".join(rijen) + "\n")
+    leeg = [c for c, r in regels if r.get("leeg")]
+    if leeg:
+        tekst += (f"\n## Leeg sjabloon: {', '.join(leeg)}\n\n"
+                  "Het ingediende verslag is het sjabloon, zonder antwoord, afbeelding of code. "
+                  "Lees het niet. ")
+        if leeg_tekst.strip():
+            tekst += ("De sectie in voorstellen.md is letterlijk de tekst hieronder "
+                      "(feedback.leeg_sjabloon), zonder Goed en Werkpunten; feedback-json zet er "
+                      "de vermelding niet onder.\n\n"
+                      + "\n".join("> " + r for r in leeg_tekst.strip().splitlines()) + "\n")
+        else:
+            tekst += "feedback.leeg_sjabloon is leeg in de config: schrijf zelf een melding van een zin.\n"
     (map_ / "OVERZICHT.md").write_text(tekst, encoding="utf-8")
 
 
@@ -578,11 +623,13 @@ def main(argv):
 
     anoniem = map_ / "anoniem"
     anoniem.mkdir(exist_ok=True)
-    sjabloon = sjabloonbeelden(vak.pad("downloads") / f"{map_.name}-verslag.docx")
+    sjabloonpad = vak.pad("downloads") / f"{map_.name}-verslag.docx"
+    sjabloon = sjabloonbeelden(sjabloonpad)
+    sjabloonregels = sjabloontekst(sjabloonpad, Namen(studenten), sjabloon)
     regels = []
     for s in sorted(ingediend, key=lambda s: per_id[str(s["id"])]):
         code = per_id[str(s["id"])]
-        regels.append((code, verwerk(s, anoniem / code, namen, sjabloon)))
+        regels.append((code, verwerk(s, anoniem / code, namen, sjabloon, sjabloonregels)))
 
     afdrukpad = map_ / "vingerafdrukken.json"
     vorige = json.loads(afdrukpad.read_text(encoding="utf-8")) if afdrukpad.exists() else None
@@ -593,7 +640,7 @@ def main(argv):
     afdrukken = dict(vorige or {})
     afdrukken.update({code: r["vingerafdruk"] for code, r in regels})
     afdrukpad.write_text(json.dumps(afdrukken, indent=1, sort_keys=True), encoding="utf-8")
-    overzicht(anoniem, regels, data["folder"]["name"])
+    overzicht(anoniem, regels, data["folder"]["name"], vak.config["feedback"].get("leeg_sjabloon", ""))
 
     zonder = [c for c, r in regels if r["verslag"] == "geen"]
     deels = [c for c, r in regels if r["voorblad"] != "-" and not r["voorblad"].startswith("weggelaten")]
@@ -609,6 +656,9 @@ def main(argv):
             print("  een gewijzigde code: schrijf haar sectie in voorstellen.md opnieuw")
     if zonder:
         print(f"  zonder verslag: {', '.join(zonder)}")
+    leeg = [c for c, r in regels if r["leeg"]]
+    if leeg:
+        print(f"  leeg sjabloon: {', '.join(leeg)}; OVERZICHT.md geeft de tekst, lees het verslag niet")
     if deels:
         print(f"  voorblad niet (volledig) herkend: {', '.join(deels)}; kijk die na voor Claude ze leest")
     onl = [c for c, r in regels if r["onleesbaar"]]
