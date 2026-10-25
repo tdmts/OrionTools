@@ -34,6 +34,16 @@ class OrionDoelen(RegelTest):
         self.assertMeldt({"orion.json": menu("page:" + INL), INL: pagina()},
                          ("orion.json", "zit niet in git"), git=True, ongetrackt=[INL])
 
+    def test_instructions_van_een_dropbox(self):
+        ind = "Labo/RS485/Indienen.html"
+        doc = json.loads(menu("page:" + INL))
+        doc["modules"][0]["items"].append({"id": "v", "dropbox": "V", "instructions": ind})
+        self.assertSchoon({"orion.json": json.dumps(doc), INL: pagina(), ind: pagina()}, git=True)
+        doc["modules"][0]["items"][-1]["instructions"] = "Labo/RS485/Weg.txt"
+        self.assertMeldt({"orion.json": json.dumps(doc), INL: pagina()},
+                         ("orion.json", "instructions is geen html"),
+                         ("orion.json", "instructions bestaat niet"), git=True)
+
     def test_fout_kapotte_json(self):
         self.assertMeldt({"orion.json": "{"}, ("orion.json", "geen geldige JSON"))
 
@@ -95,6 +105,11 @@ class OrionWees(RegelTest):
     def test_fout_wees(self):
         self.assertMeldt({"orion.json": menu("page:" + INL), INL: pagina(), OPDR: pagina()},
                          (OPDR, "staat niet als page in orion.json"))
+
+    def test_goed_instructions_dekt(self):
+        doc = json.loads(menu("page:" + INL))
+        doc["modules"][0]["items"].append({"id": "v", "dropbox": "V", "instructions": OPDR})
+        self.assertSchoon({"orion.json": json.dumps(doc), INL: pagina(), OPDR: pagina()})
 
     def test_fout_verkeerde_hoofdletter_dekt_niet(self):
         self.assertMeldt({"orion.json": menu("page:Labo/RS485/Overview.html"), INL: pagina()},

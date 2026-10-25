@@ -47,6 +47,8 @@ class OrionDoelen(Regel):
                 continue
             if soort == "page" and not doel.endswith(".html"):
                 ctx.fout("orion.json", f'page is geen html, gebruik "file": {doel}')
+            if soort == "instructions" and not doel.endswith(".html"):
+                ctx.fout("orion.json", f"instructions is geen html: {doel}")
             pad = ctx.root / doel
             if pad.name.startswith("TODO-"):
                 continue
@@ -191,6 +193,9 @@ class OrionWees(Regel):
     browser gewoon opent. Er is geen navigatie van de site zelf die haar nog
     bereikbaar zou maken.
 
+    De instructies van een dropbox ("instructions") zijn ook een pagina van het
+    menu: OrionSync schrijft ze in de dropbox, en die staat in het menu.
+
     Welke mappen meetellen, zegt check.orphan_roots. Een vak waar de theorie
     als losse syllabus-PDF bestaat, kijkt alleen naar Labo/; een vak waarvan elk
     bestand een topic is, geeft ".".
@@ -208,7 +213,7 @@ class OrionWees(Regel):
         # hoofdletter in orion.json maakt in Orion een dode link, en de pagina
         # zelf is dan even onvindbaar als wanneer ze er niet in stond.
         paginas = {os.path.normcase(str(ctx.root / d)) for soort, d in doelen
-                   if soort == "page" and (ctx.root / d).is_file()
+                   if soort in ("page", "instructions") and (ctx.root / d).is_file()
                    and ctx.exacte_hoofdletters(ctx.root / d)}
         wortels = [(ctx.root / w).resolve() for w in ctx.config["check"]["orphan_roots"]]
         paginas_gecontroleerd = set(ctx.paginas)

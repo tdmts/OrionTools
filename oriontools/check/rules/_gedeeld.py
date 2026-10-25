@@ -84,7 +84,9 @@ def overview_paginas(ctx):
 def orion_doelen(ctx):
     """(doelen, fout): elk topic in orion.json dat naar de repo wijst, als (soort, pad).
 
-    Een dropbox wijst naar niets in de repo en telt dus niet mee. Het bestand
+    Een dropbox wijst zelf naar niets in de repo; wel zijn "instructions", de
+    pagina waaruit OrionSync de instructies van de dropbox schrijft (npm run
+    instructions, beslist op 25 oktober 2026). Het bestand
     wordt een keer gelezen; alleen orion-targets meldt een kapot bestand, zodat
     het maar een keer in de uitvoer staat.
     """
@@ -103,7 +105,7 @@ def orion_doelen(ctx):
     def loop(item):
         for kind in item.get("items", []):
             loop(kind)
-        for soort in ("page", "file"):
+        for soort in ("page", "file", "instructions"):
             if isinstance(item.get(soort), str):
                 doelen.append((soort, item[soort]))
 
