@@ -145,10 +145,10 @@ class AuditCodeKlasse(AuditRegel):
     Zo leest een blok hetzelfde op een theoriepagina en in een oplossing.
     Welke talen mogen, zegt check.audit.code_languages (Microcontrollers: alleen
     cpp; leeg is elke language-*). Een taal uit check.audit.code_no_badge
-    draagt geen show-language: RAPID heeft geen highlight.js-grammatica, en een
-    onbekende language-* laat highlight.js struikelen, waarna geen enkel later
-    blok op de pagina nog kleurt. Dus is RAPID language-plaintext, en de badge
-    zou dan "plaintext" zeggen.
+    draagt geen show-language: plaintext, want de badge zou dan "plaintext"
+    zeggen. RAPID was plaintext tot OrionCSS op 26 oktober 2026 een eigen
+    grammatica kreeg (rapidLanguage in main.js); nu is het language-rapid,
+    met badge.
     """
 
     id = "audit-code-class"
