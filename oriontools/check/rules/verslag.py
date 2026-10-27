@@ -151,29 +151,48 @@ class VerslagMarkup(Regel):
 
 EVALUATIEKADER_RE = re.compile(r'class="[^"]*\binfo-box\b[^"]*\bevaluation\b', re.I)
 ALINEA_RE = re.compile(r"<p\b([^>]*)>(.*?)</p>", re.S | re.I)
+CONTROLE_KLASSE_RE = re.compile(r'class="[^"]*\bcontrole\b')
 # "Laat je schema controleren", "Vraag de lector om je oefening te controleren".
 # Niet "Controleer of ...": dat kijkt de student zelf na, en daar hoort geen
 # moment bij de lector.
 CONTROLEZIN_RE = re.compile(r"\b(laat|lector)\b[^.]*\bcontroleren\b", re.I)
+# Op een pagina alleen een alinea die ermee begint: "Je laat elke oefening ter
+# plaatse controleren" op een Inleiding beschrijft de werkvorm, en is geen moment.
+CONTROLE_OPENING_RE = re.compile(r"(laat|vraag de lector)\b[^.]*\bcontroleren\b", re.I)
+
+
+def _losse_controles(inhoud, alleen_opening):
+    """De tekst van elke gewone alinea in inhoud die een controle vraagt."""
+    for m in ALINEA_RE.finditer(inhoud):
+        if CONTROLE_KLASSE_RE.search(m.group(1)):
+            continue
+        zin = " ".join(re.sub("<[^>]+>", " ", m.group(2)).split())
+        if (CONTROLE_OPENING_RE.match(zin) if alleen_opening else CONTROLEZIN_RE.search(zin)):
+            yield zin
 
 
 class VerslagControle(Regel):
-    """Een controlemoment in het verslag is een <p class="controle">, en niets anders.
+    """Een controlemoment is een <p class="controle">, in het verslag en op de pagina.
 
     export-verslag maakt van die alinea een omkaderde oranje balk over de volle
-    breedte, de plaats waar de student stopt en zijn werk laat nakijken. Als
-    gewone zin tussen de alinea's las hij er overheen, en een info-box
-    evaluation wordt in de docx een kader zoals de tip en de waarschuwing,
-    zodat het moment er niet uitspringt. Met een vorm voor alle labo's ziet het
-    in elk verslag hetzelfde uit, en herkent de student het ook in het volgende
-    labo.
+    breedte, de plaats waar de student stopt en zijn werk laat nakijken, en
+    OrionCSS toont dezelfde balk op de site. Als gewone zin tussen de alinea's
+    las hij er overheen, en een info-box evaluation wordt in de docx een kader
+    zoals de tip en de waarschuwing, zodat het moment er niet uitspringt. Met
+    een vorm voor alle labo's, op de pagina en in het document, herkent de
+    student het overal.
 
-    Twee dingen worden nagekeken, alleen in het <!-- verslag --> blok van een
-    Opdracht.html: een info-box evaluation, en een gewone alinea die de student
-    vraagt zijn werk te laten controleren ("laat ... controleren", "de lector
-    ... controleren"). Staat die vraag in een alinea met andere instructies, zet
-    ze dan apart: de balk hoort bij het moment, niet bij de uitleg ervoor.
-    "Controleer of ..." telt niet, want dat doet de student zelf.
+    In het <!-- verslag --> blok van een Opdracht.html wordt een info-box
+    evaluation nagekeken, en elke gewone alinea die vraagt het werk te laten
+    controleren ("laat ... controleren", "de lector ... controleren"). Staat die
+    vraag in een alinea met andere instructies, zet ze dan apart: de balk hoort
+    bij het moment, niet bij de uitleg ervoor.
+
+    Op een pagina onder paths.labo, buiten commentaar, telt alleen een alinea
+    die met "Laat" of "Vraag de lector" begint. Een Inleiding zegt in een zin
+    als "Je laat elke oefening ter plaatse controleren" hoe het labo werkt, en
+    dat is geen moment om te stoppen. "Controleer of ..." telt nergens, want dat
+    doet de student zelf.
     """
 
     id = "verslag-controle"
@@ -183,25 +202,32 @@ class VerslagControle(Regel):
         return heeft_opdracht(ctx)
 
     def controleer(self, ctx):
-        for opdracht in opdracht_paginas(ctx):
-            tekst = ctx.tekst(opdracht)
+        labo = ctx.config["paths"]["labo"]
+        opdrachten = set(opdracht_paginas(ctx))
+        for pad in ctx.html:
+            in_labo = labo in pad.relative_to(ctx.root).parts
+            if pad not in opdrachten and not in_labo:
+                continue
+            tekst = ctx.tekst(pad)
             if onafgesloten_commentaren(tekst):
                 continue  # unclosed-comment meldt het al
+            if in_labo:
+                for zin in _losse_controles(COMMENTAAR_RE.sub("", tekst), True):
+                    ctx.fout(pad, f'"{zin[:70]}" vraagt een controle in een gewone alinea: '
+                                  'maak er een <p class="controle"> van')
+            if pad not in opdrachten:
+                continue
             for blok in COMMENTAAR_RE.finditer(tekst):
                 inhoud = blok.group(1)
                 if not inhoud.strip().startswith("verslag"):
                     continue
                 if EVALUATIEKADER_RE.search(inhoud):
-                    ctx.fout(opdracht, "een info-box evaluation in het verslag: maak van het "
-                                       'controlemoment een <p class="controle">, dat de docx als '
-                                       "oranje balk toont")
-                for m in ALINEA_RE.finditer(inhoud):
-                    if re.search(r'class="[^"]*\bcontrole\b', m.group(1)):
-                        continue
-                    zin = " ".join(re.sub("<[^>]+>", " ", m.group(2)).split())
-                    if CONTROLEZIN_RE.search(zin):
-                        ctx.fout(opdracht, f'"{zin[:70]}" vraagt een controle in een gewone '
-                                           'alinea: zet die vraag apart in een <p class="controle">')
+                    ctx.fout(pad, "een info-box evaluation in het verslag: maak van het "
+                                  'controlemoment een <p class="controle">, dat de docx als '
+                                  "oranje balk toont")
+                for zin in _losse_controles(inhoud, False):
+                    ctx.fout(pad, f'"{zin[:70]}" vraagt een controle in een gewone '
+                                  'alinea: zet die vraag apart in een <p class="controle">')
 
 
 class OpdrachtLead(Regel):

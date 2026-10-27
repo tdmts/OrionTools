@@ -89,9 +89,20 @@ class VerslagControle(RegelTest):
     def test_goed_controle_alinea_en_zelf_controleren(self):
         blok = VERSLAG.replace("</ol>", "</ol>\n<p>Controleer of de led brandt.</p>\n"
                                         '<p class="controle">Laat je oefening controleren.</p>')
-        # Buiten het verslag telt het niet: daar staat de pagina zelf.
-        self.assertSchoon({OPDR: opdracht(verslag=blok,
-                                          extra="<p>Laat je schema controleren.</p>")})
+        # Op een pagina telt een zin over de werkvorm niet, en buiten Labo/ niets.
+        self.assertSchoon({OPDR: opdracht(verslag=blok),
+                           "Labo/RS485/overview.html": pagina(
+                               "<p>Je laat elke oefening ter plaatse controleren.</p>"),
+                           "Labo/RS485/Oefening.html": pagina(
+                               '<p class="controle">Laat je oefening controleren.</p>'),
+                           "Algemeen/Evaluatie.html": pagina("<p>Laat je werk controleren.</p>")})
+
+    def test_fout_losse_zin_op_een_pagina(self):
+        p = "Labo/RS485/Oefening.html"
+        self.assertMeldt({OPDR: opdracht(extra="<p>Laat je schema controleren.</p>"),
+                          p: pagina("<p>Vraag de lector om je oefening te controleren.</p>")},
+                         (OPDR, '"Laat je schema controleren."'),
+                         (p, '"Vraag de lector om je oefening te controleren."'))
 
     def test_fout_evaluatiekader_en_losse_zin(self):
         blok = VERSLAG.replace("</ol>", '</ol>\n<div class="info-box evaluation">'
