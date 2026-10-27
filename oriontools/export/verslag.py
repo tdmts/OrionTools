@@ -94,7 +94,8 @@ Chrome is dus alleen nodig als er echt een svg in de opdracht staat. Een labo
 zonder svg draait met niets dan python-docx, en dat blijft zo.
 
 De regels unclosed-comment en verslag-markup van de check (orion.py check)
-bewaken dat het blok afgesloten is en dat er geen vragen buiten terechtkomen.
+bewaken dat het blok afgesloten is en dat er geen vragen buiten terechtkomen;
+verslag-controle dat elk controlemoment een <p class="controle"> is.
 
 Nodig: python-docx (pip install python-docx), en een headless Chrome of Edge
 zodra de opdracht een svg bevat. Waar die staat weet oriontools/chrome.py.

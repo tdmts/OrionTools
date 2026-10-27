@@ -83,6 +83,27 @@ class VerslagMarkup(RegelTest):
         self.assertSchoon({OPDR: opdracht(extra='<!-- open <ol class="vragen"></ol>')})
 
 
+class VerslagControle(RegelTest):
+    regel = "verslag-controle"
+
+    def test_goed_controle_alinea_en_zelf_controleren(self):
+        blok = VERSLAG.replace("</ol>", "</ol>\n<p>Controleer of de led brandt.</p>\n"
+                                        '<p class="controle">Laat je oefening controleren.</p>')
+        # Buiten het verslag telt het niet: daar staat de pagina zelf.
+        self.assertSchoon({OPDR: opdracht(verslag=blok,
+                                          extra="<p>Laat je schema controleren.</p>")})
+
+    def test_fout_evaluatiekader_en_losse_zin(self):
+        blok = VERSLAG.replace("</ol>", '</ol>\n<div class="info-box evaluation">'
+                                        '<div class="info-title evaluation">Laat dit nakijken</div>'
+                                        "<p>Vraag de lector om je oefening te controleren.</p></div>\n"
+                                        "<p>Maak een schema en laat het controleren. Teken het.</p>")
+        self.assertMeldt({OPDR: opdracht(verslag=blok)},
+                         (OPDR, "info-box evaluation"),
+                         (OPDR, '"Vraag de lector om je oefening te controleren."'),
+                         (OPDR, '"Maak een schema en laat het controleren. Teken het."'))
+
+
 class OpdrachtLead(RegelTest):
     regel = "opdracht-lead"
 
