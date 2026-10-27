@@ -96,6 +96,17 @@ Platte tekst, per opdracht een bestand in `_oplossingen/`:
   vult elke rij elke kolom. De pintabel van RS485 in DeN vraagt precies het
   omgekeerde: een kruisje in een van de vier. Wat met ` | ` geschreven was,
   leest hier hetzelfde. Een rij met te veel of te weinig waarden slaat af.
+* Een rij neemt de EERSTE regel die haar label draagt, en die regel is dan
+  op. Staat een label twee keer in de vraag, zoals drie keer Subnetmasker in
+  een bittabel van Draadloos netwerk, dan schrijf je het dus twee keer, in de
+  volgorde van de opdracht. Draagt de vraag meer dan een tabel, dan gaan de
+  regels in die volgorde over de tabellen heen; een witregel ertussen mag.
+* Laat de opdracht ook de eerste cel van een rij open, dan is het label leeg
+  en begint de regel met de dubbelpunt: `: dlink-F8B5 | 10 | 2.4 GHz`. Zo'n
+  rij vult elke kolom, de eerste incluis.
+* In een tabel met class `bits` mag een rij een binair getal zijn, met punten
+  of spaties waar je wil: `IP-adres: 11000000.10101000.00000000.01100101`.
+  Elke bit krijgt haar vak.
 * Het label eindigt op de eerste dubbelpunt MET een spatie erachter, zodat een
   label als een Windows-pad met `c:` erin heel blijft.
 * Een blok tussen ``` wordt een codeblok. Alleen daar blijft de inspringing
@@ -169,8 +180,8 @@ nodig hebben. Gelijke kolommen (width: 50% per cel) gaven daar een brede kolom
 voor een kruisje.
 
 Een figuur wordt ingesloten met een absolute file-URL en op de maat die ook
-export-verslag rekent: de eigen maat op 96 dpi, afgetopt op de
-tekstbreedte. Een svg gaat ongemoeid het document in, want hier drukt Chrome af
+export-verslag rekent: de eigen maat op 96 dpi of de width van de <img>,
+afgetopt op de tekstbreedte. Een svg gaat ongemoeid het document in, want hier drukt Chrome af
 en die kent svg wel; alleen Word kan er niet mee overweg.
 
 DE PARSER IS EEN KOPIE
@@ -327,20 +338,22 @@ class Antwoord:
         """De kopregels `Label: waarde`, en wat er daarna nog aan tekst staat.
 
         De reeks stopt bij de eerste regel die geen label draagt, dus een zin
-        met een dubbelpunt halverwege het antwoord blijft een zin.
+        met een dubbelpunt halverwege het antwoord blijft een zin. Een lege
+        regel stopt ze niet: een vraag met twee tabellen leest makkelijker met
+        een witregel tussen de rijen van de ene en die van de andere.
         """
         velden = []
-        i = 0
+        einde = 0
         for i, regel in enumerate(self.regels):
-            m = VELD.match(regel.strip())
-            if regel.strip() and m:
-                velden.append((m.group(1).strip(), (m.group(2) or "").strip()))
+            if not regel.strip():
                 continue
-            break
-        else:
-            i = len(self.regels)
+            m = VELD.match(regel.strip())
+            if not m:
+                break
+            velden.append((m.group(1).strip(), (m.group(2) or "").strip()))
+            einde = i + 1
         rest = Antwoord(self.sleutel, self.naam)
-        rest.regels = self.regels[i:]
+        rest.regels = self.regels[einde:]
         return velden, rest
 
 
@@ -358,7 +371,10 @@ ONDER_HET_KADER = (
 VRAAGSLEUTEL = re.compile(r"^\s*(\d+)\s*\.\s*$")
 KADERSLEUTEL = re.compile(r"^\s*\[kader\]", re.I)
 SECTIESLEUTEL = re.compile(r"^\s*\[sectie\]\s*(.+?)\s*$", re.I)
-VELD = re.compile(r"^(.{1,120}?):(?:\s+(.*))?$")
+# Het label mag leeg zijn: `: waarde | waarde` vult een rij waarvan de opdracht
+# ook de eerste cel openlaat.
+VELD = re.compile(r"^(.{0,120}?):(?:\s+(.*))?$")
+BITS = re.compile(r"^[01 .]+$")
 HEK = "```"
 
 
@@ -671,59 +687,68 @@ def antwoordblok(antwoord, staat, waar):
     return f'<div class="antwoord">{romp}</div>' if romp else ""
 
 
+def rijwaarden(waarde, aantal, bits, waar, label):
+    """De waarde van een rij, verdeeld over de kolommen die ze invult."""
+    if bits and "|" not in waarde and BITS.match(waarde):
+        waarden = [teken for teken in waarde if teken in "01"]
+        hoe = "een bit per kolom"
+    elif aantal == 1:
+        return [waarde]
+    else:
+        # Op de streep zelf splitsen en pas daarna strippen, want een kolom mag
+        # leeg zijn en een lege kolom vooraan of achteraan overleeft een
+        # scheiding met spaties erin niet.
+        waarden = [w.strip() for w in waarde.split("|")]
+        hoe = "gescheiden door '|'"
+    if len(waarden) != aantal:
+        sys.exit(f"{waar}: rij '{label}' draagt {len(waarden)} waarden, "
+                 f"de tabel heeft er {aantal} nodig, {hoe}")
+    return waarden
+
+
 def ingevulde_tabel(node, velden, waar):
     """De invultabel met de antwoorden in de kolommen na het rijlabel.
 
-    De rijlabels van de opdracht zijn leidend: staat er een label in het
-    antwoordbestand dat de tabel niet heeft, dan is de opdracht gewijzigd en
-    slaat dit af in plaats van de waarde stil te laten vallen.
+    De rijlabels van de opdracht zijn leidend, en elke rij NEEMT haar regel uit
+    `velden`: de eerste die haar label draagt. Zo krijgt elke rij haar eigen
+    regel als een label twee keer voorkomt, in deze tabel of in een volgende
+    tabel van dezelfde vraag, en is wat na de laatste tabel overblijft een
+    regel waar de opdracht geen rij voor heeft. Dat laatste kijkt de aanroeper
+    na, want alleen die weet welke tabel de laatste is.
     """
     koppen = [c.inner_text() for c in node.find_all("th")]
     rijen = [r for r in node.find_all("tr") if any(c.tag == "td" for c in r.children)]
     if not koppen or not rijen:
         return ""
 
-    per_label = {normaliseer(label): waarde for label, waarde in velden}
-    gebruikt = set()
-
-    uit = ['<table class="invul">', "<thead><tr>"]
+    bits = "bits" in node.classes
+    uit = [f'<table class="invul{" bits" if bits else ""}">', "<thead><tr>"]
     for kop in koppen:
         uit.append(f"<th>{esc(kop)}</th>")
     uit.append("</tr></thead><tbody>")
 
+    leeg = []
     for rij in rijen:
         cellen = [c for c in rij.children if c.tag == "td"]
         label = cellen[0].inner_text() if cellen else ""
         sleutel = normaliseer(label)
+        plaats = next((i for i, (naam, _) in enumerate(velden)
+                       if normaliseer(naam) == sleutel), None)
+        if plaats is None:
+            leeg.append(label or "(een rij zonder label)")
+            continue
+        waarde = velden.pop(plaats)[1]
         uit.append("<tr>")
-        uit.append(f"<td>{esc(label)}</td>")
-        if sleutel in per_label:
-            gebruikt.add(sleutel)
-            waarden = [per_label[sleutel]]
-            if len(koppen) > 2:
-                # Op de streep zelf splitsen en pas daarna strippen, want een
-                # kolom mag leeg zijn en een lege kolom vooraan of achteraan
-                # overleeft een scheiding met spaties erin niet.
-                waarden = [w.strip() for w in per_label[sleutel].split("|")]
-                if len(waarden) != len(koppen) - 1:
-                    sys.exit(f"{waar}: rij '{label}' draagt {len(waarden)} waarden, "
-                             f"de tabel heeft er {len(koppen) - 1} nodig, "
-                             f"gescheiden door '|'")
-            for waarde in waarden:
-                uit.append(f'<td class="gevuld">{esc(waarde)}</td>')
-        else:
-            for _ in range(len(koppen) - 1):
-                uit.append('<td class="ontbreekt"></td>')
+        if label:
+            uit.append(f"<td>{esc(label)}</td>")
+        # Een rij zonder label laat ook haar eerste cel open: daar vult de
+        # student zelf in waar de rij over gaat, en het antwoord dus ook.
+        aantal = len(koppen) - (1 if label else 0)
+        for cel in rijwaarden(waarde, aantal, bits, waar, label):
+            uit.append(f'<td class="gevuld">{esc(cel)}</td>')
         uit.append("</tr>")
     uit.append("</tbody></table>")
 
-    over = set(per_label) - gebruikt
-    if over:
-        namen = ", ".join(sorted(over))
-        sys.exit(f"{waar}: deze labels staan niet in de tabel van de opdracht: {namen}")
-    ontbreekt = [normaliseer([c for c in r.children if c.tag == "td"][0].inner_text())
-                 for r in rijen]
-    leeg = [n for n in ontbreekt if n not in per_label]
     if leeg:
         namen = ", ".join(leeg)
         sys.exit(f"{waar}: geen antwoord voor deze rijen: {namen}")
@@ -747,6 +772,12 @@ def figuur(node, basis):
         return f'<p class="ontbreekt">[Afbeelding ontbreekt: {esc(src)}]</p>'
 
     maat = breedte_cm(pad)
+    # Een width op de <img> volgt export-verslag voor een raster, in CSS-pixels
+    # en dus op 96 dpi; anders staat een dialoogvenster hier op ware grootte en
+    # in het verslag verkleind, en lopen de twee documenten uit elkaar.
+    opgegeven = imgs[0].attrs.get("width")
+    if opgegeven and pad.suffix.lower() != ".svg":
+        maat = min(float(opgegeven) / 96 * 2.54, MAX_BREEDTE_CM)
     stijl = f' style="width: {maat:.2f}cm"' if maat else ""
     uit = [f'<figure><img src="{esc_attr(pad.as_uri())}" alt="{esc_attr(alt)}"{stijl}>']
 
@@ -950,6 +981,11 @@ def vragenlijst(node, uit, antwoorden, staat, basis, waar):
                          f"  {rest.alineas()[0][:70]}")
             for tabel in tabellen:
                 uit.append(ingevulde_tabel(tabel, velden, f"{waar}, vraag {nummer}"))
+            if velden:
+                namen = ", ".join(sorted({label or "(een leeg label)"
+                                          for label, _ in velden}))
+                sys.exit(f"{waar}, vraag {nummer}: voor deze regels heeft de tabel "
+                         f"van de opdracht geen rij (meer): {namen}")
         else:
             uit.append(antwoordblok(antwoord, staat, f"{waar}, vraag {nummer}"))
         uit.append("</div>")
@@ -1006,7 +1042,8 @@ def render(container, uit, antwoorden, staat, basis, waar):
             # kop en niet eronder.
             sluit_sectie(uit, antwoorden, staat, waar)
             staat["sectie"] = node.inner_text()
-            uit.append(f"<h2>{esc(node.inner_text())}</h2>")
+            blad = ' class="nieuwe-pagina"' if "nieuwe-pagina" in klassen else ""
+            uit.append(f"<h2{blad}>{esc(node.inner_text())}</h2>")
         elif node.tag == "h3":
             uit.append(f"<h3>{esc(node.inner_text())}</h3>")
         elif node.tag == "p":
@@ -1092,6 +1129,20 @@ table.invul th, table.invul td { border: 0.5pt solid #000; padding: 0 0.19cm;
 table.invul th { text-align: left; font-weight: bold; }
 table.invul td { height: 0.8cm; }
 table.invul td p, table.invul th p { margin: 0; }
+
+/* Een vak per bit, met de maten van bittabel() in export-verslag: het label
+   2,8cm, de bits delen de rest zonder celmarge, de kop klein, en na elke acht
+   bits een dikkere lijn. */
+table.invul.bits { table-layout: fixed; }
+table.invul.bits th, table.invul.bits td { padding: 0; text-align: center; }
+table.invul.bits th:first-child, table.invul.bits td:first-child
+    { width: 2.8cm; text-align: left; padding-left: 0.1cm; }
+table.invul.bits thead th { font-size: 6pt; font-weight: normal; }
+table.invul.bits th:nth-child(8n+2), table.invul.bits td:nth-child(8n+2)
+    { border-left: 1.5pt solid #000; }
+
+/* Zelfde bladovergang als in het verslag. */
+h2.nieuwe-pagina { page-break-before: always; }
 
 pre { font-family: Consolas, monospace; font-size: 9pt; margin: 0 0 10pt 0.6cm;
       white-space: pre-wrap; }
