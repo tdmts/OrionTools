@@ -35,6 +35,7 @@ COMMANDOS = {
     "ans-push": ("oriontools.ans.push", "de meerkeuzevragen van een pagina naar een vragenbank in ANS"),
     "ans-dekking": ("oriontools.ans.dekking", "verouderde items in ANS en theorie zonder vraag"),
     "ans-toets": ("oriontools.ans.toets", "de toets van een labo in ANS, met de instellingen uit oriontools.json"),
+    "ans-codeblok": ("oriontools.ans.codeblok", "codeblokken die de import van ANS in stukken knipte, terug in een <pre>"),
     "feedback-voorbereiden": ("oriontools.feedback.voorbereiden", "de verslagen van een dropbox anoniem, om feedback op te schrijven"),
     "feedback-spreadsheet": ("oriontools.feedback.spreadsheet", "de feedbackvoorstellen in een spreadsheet, met de namen erbij"),
     "feedback-json": ("oriontools.feedback.naar_json", "de spreadsheet van de lector naar de JSON van npm run dropbox"),

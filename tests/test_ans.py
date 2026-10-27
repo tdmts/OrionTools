@@ -386,5 +386,23 @@ class Vragen(unittest.TestCase):
             toets.wacht_op_vragen(client.Client(GEHEIM, openen=net), 5, 3, slapen=lambda s: None)
 
 
+class CodeblokTest(unittest.TestCase):
+    """Wat ans-codeblok terugzet van een codeblok dat de import van ANS knipte."""
+
+    def test_geknipt_wordt_pre_met_regeleinden(self):
+        from oriontools.ans import codeblok
+        geknipt = ('<div>Uitvoer:</div> <br> <pre><code><code>Ethernet adapter:</code><code></code>'
+                   '<code>   DHCP Enabled. . : Yes</code></code></pre> <div>Wat?</div>')
+        self.assertEqual(codeblok.herstel(geknipt),
+                         '<div>Uitvoer:</div> <br> <pre>Ethernet adapter:\n\n   DHCP Enabled. . : Yes</pre>'
+                         ' <div>Wat?</div>')
+
+    def test_zonder_geknipt_codeblok_niets(self):
+        from oriontools.ans import codeblok
+        self.assertIsNone(codeblok.herstel('<div>Typ <code>ipconfig</code>.</div>'))
+        self.assertIsNone(codeblok.herstel('<pre>al goed\nzo</pre>'))
+        self.assertIsNone(codeblok.herstel(None))
+
+
 if __name__ == "__main__":
     unittest.main()

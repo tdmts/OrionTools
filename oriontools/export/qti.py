@@ -68,7 +68,8 @@ QTI 3.0 zonder die proef opnieuw te doen.
 
 Een figuur (<img src> relatief) gaat mee in de zip, onder zijn pad in het vak,
 en staat in het manifest bij het item dat hem gebruikt. Een codeblok blijft
-een <pre>. Een link wordt zijn tekst: in ANS bestaat de pagina niet waar hij
+een <pre>; de import van ANS knipt het in een <code> per regel, en ans-push
+zet het daarna terug (zie ans-codeblok). Een link wordt zijn tekst: in ANS bestaat de pagina niet waar hij
 naartoe wees.
 
 IN ANS NAGEKEKEN

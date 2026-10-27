@@ -88,6 +88,7 @@ from pathlib import Path
 
 from .. import repo
 from ..export import qti
+from . import codeblok
 from .client import AnsFout, Client
 
 PROEFBANK = "Orion-proef"
@@ -287,6 +288,11 @@ def main(argv=None):
                 # name staat als verplicht in de swagger, ook bij een PATCH
                 client.vraag("PATCH", f"/question_bank_exercises/{e['id']}",
                              body={"name": e["name"], "external_id": waarde})
+        # De import knipt een codeblok in een <code> per regel; zie ans-codeblok.
+        binnen = set(nieuw) | {e["qti_identifier"] for e in gewijzigd}
+        hersteld = codeblok.herstel_oefeningen(client, [na[q]["id"] for q in binnen if q in na])
+        if hersteld:
+            print(f"  {hersteld} vraag/vragen met een codeblok teruggezet in een <pre>")
     except AnsFout as e:
         sys.exit(f"ans-push: {e}")
 
