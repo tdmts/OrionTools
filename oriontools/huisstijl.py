@@ -1,7 +1,7 @@
 """Waar de stijlbladen van de exports staan: hier, en in de checkout van OrionCSS.
 
-Een vak draagt geen opmaak voor zijn PDF's meer. syllabus.css en handout.css
-leest alleen een export, dus ze staan in OrionTools, in oriontools/export/stijl/,
+Een vak draagt geen opmaak voor zijn PDF's meer. syllabus.css, handout.css en
+spiekblad.css leest alleen een export, dus ze staan in OrionTools, in oriontools/export/stijl/,
 met de icoontjes van de syllabuskaders ernaast. hoorcollege.css laadt ook het
 deck zelf in de cursus, dus dat staat in OrionCSS en wordt gespiegeld zoals
 style.css.
@@ -29,6 +29,10 @@ def syllabus_css():
 
 def handout_css():
     return STIJL / "handout.css"
+
+
+def spiekblad_css():
+    return STIJL / "spiekblad.css"
 
 
 def hoorcollege_css():

@@ -84,9 +84,9 @@ class RegelTest(unittest.TestCase):
     config = {}
 
     def huisstijl(self, mtimes=None):
-        """syllabus.css, handout.css en hoorcollege.css in een tijdelijke map, op T0.
+        """syllabus.css, handout.css, spiekblad.css en hoorcollege.css in een tijdelijke map, op T0.
 
-        Die drie staan buiten het vak (zie oriontools/huisstijl.py), en de echte
+        Die vier staan buiten het vak (zie oriontools/huisstijl.py), en de echte
         dragen de mtime van de laatste checkout: tegen T0 zijn ze altijd nieuwer,
         en elke verouderingsregel zou dan melden. mtimes={naam: seconden} zoals
         bij vak(). Geeft {naam: pad} terug.
@@ -100,6 +100,7 @@ class RegelTest(unittest.TestCase):
             self.addCleanup(patch.stop)
         paden = {"syllabus.css": _huisstijl.syllabus_css(),
                  "handout.css": _huisstijl.handout_css(),
+                 "spiekblad.css": _huisstijl.spiekblad_css(),
                  "hoorcollege.css": _huisstijl.hoorcollege_css()}
         for naam, pad in paden.items():
             pad.parent.mkdir(parents=True, exist_ok=True)

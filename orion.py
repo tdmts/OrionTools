@@ -28,6 +28,7 @@ COMMANDOS = {
     "export-handout": ("oriontools.export.handout", "de handout-PDF van een deck"),
     "export-verslag": ("oriontools.export.verslag", "het verslagsjabloon (docx) van een Opdracht.html"),
     "export-oplossing": ("oriontools.export.oplossing", "de modeloplossing (PDF) van een opdracht"),
+    "export-spiekblad": ("oriontools.export.spiekblad", "het spiekblad van een labo als PDF"),
     "export-pdf": ("oriontools.export.pdf", "een labo of module als PDF"),
     "export-qti": ("oriontools.export.qti", "een vragenpagina als QTI-zip voor ANS"),
     "ans-verken": ("oriontools.ans.verken", "de vragenbanken en cursussen die je ANS-token ziet"),

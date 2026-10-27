@@ -1,0 +1,151 @@
+/*
+ * spiekblad.css -- het spiekblad van een labo, op papier.
+ *
+ * Wordt door orion.py export-spiekblad geladen, en door niets anders. De pagina
+ * in de cursus laadt OrionCSS; die is voor een scherm gemaakt en drukt een
+ * tabel af met de teal kopbalk vol inkt en ruime cellen. Hier staat alleen wat
+ * het blad nodig heeft.
+ *
+ * ZO WEINIG BLADEN ALS HET KAN, want een spiekblad ligt naast het toetsenbord.
+ * Daarom 9pt en smalle marges: een recto verso is het doel, en een tabel die op
+ * een haar na niet past, kost een heel blad.
+ *
+ * EEN RIJ BREEKT NIET, een tabel wel. Een tabel van achttien commando's op een
+ * blad houden zou een half blad wit laten; een rij die in tweeen valt, leest
+ * niemand. De kop van de tabel komt op het volgende blad terug (thead).
+ *
+ * EEN KORTE TABEL BREEKT OOK NIET. Van hoogstens zes rijen levert breken geen
+ * plaats op, en Chrome zette zo de kop, de caption en de kopregel onderaan een
+ * blad en de vier rijen erna op het volgende (spiekblad Linux Geavanceerd, 27
+ * september 2026). Dan schuift de tabel liever in haar geheel door, en de h2
+ * erboven gaat mee door zijn break-after.
+ *
+ * WEINIG INKT. De kopregel is een lichte vulling met donkere letters, niet de
+ * volle kleur van het scherm. De teal staat alleen in de koppen, zodat het blad
+ * herkenbaar blijft als het onze stijl is.
+ */
+
+@page { size: A4; margin: 12mm 12mm 16mm 12mm; }
+
+html, body {
+    background: #fff;
+    color: #222;
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9pt;
+    line-height: 1.3;
+}
+
+body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* -------------------------------------------------------------- de kop */
+
+header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 0.6mm solid #004d40;
+    padding-bottom: 1.5mm;
+    margin-bottom: 4mm;
+}
+
+h1 {
+    color: #004d40;
+    font-size: 16pt;
+    margin: 0;
+}
+
+header .labo {
+    color: #004d40;
+    font-size: 11pt;
+    font-weight: bold;
+}
+
+h2 {
+    color: #004d40;
+    font-size: 11pt;
+    margin: 5mm 0 1.5mm;
+    break-after: avoid;
+    page-break-after: avoid;
+}
+
+h2:first-of-type { margin-top: 0; }
+
+p { margin: 0 0 2mm; }
+
+/* ---------------------------------------------------------- de tabellen */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 3mm;
+}
+
+caption {
+    caption-side: top;
+    text-align: left;
+    font-weight: bold;
+    padding: 0 0 1mm;
+}
+
+thead { display: table-header-group; }
+
+tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+table:has(> tbody > tr:last-child:nth-child(-n+6)) {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+th, td {
+    border: 0.25mm solid #9bb0ac;
+    padding: 0.7mm 1.5mm;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background: #e0e7e5;
+    color: #004d40;
+}
+
+/* ------------------------------------------------------- code en toetsen */
+
+code, kbd {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 9pt;
+}
+
+code { white-space: nowrap; }
+
+kbd {
+    border: 0.2mm solid #9bb0ac;
+    border-radius: 0.6mm;
+    padding: 0 0.6mm;
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ een kader */
+
+.info-box {
+    border-left: 1mm solid #004d40;
+    background: #f2f6f5;
+    padding: 1.5mm 2.5mm;
+    margin: 0 0 3mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.info-title {
+    font-weight: bold;
+    color: #004d40;
+    margin-bottom: 1mm;
+}
+
+.info-box p:last-child { margin-bottom: 0; }
