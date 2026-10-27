@@ -30,6 +30,8 @@ met dezelfde HTML-componenten als de rest van de site.
 Binnen dat blok:
 
 * h1 / h2 / h3, alinea's, lijsten en codeblokken worden gewone tekst.
+* <h2 class="nieuwe-pagina"> begint op een nieuw blad: voor een deel dat de
+  student los van de rest afwerkt, zoals de berekeningen die hij thuis maakt.
 * <code>, <kbd>, <strong> en <em> binnen een zin houden hun opmaak: een commando
   in Consolas op een grijze achtergrond, een toets vet met een randje. Zonder
   dat was elke alinea platte tekst, en stond "typ show vlan" in het document
@@ -821,7 +823,9 @@ def render(container, doc, basis, teller=None):
         if node.tag == "h1":
             doc.add_heading(node.inner_text(), level=0)
         elif node.tag == "h2":
-            doc.add_heading(node.inner_text(), level=1)
+            kop = doc.add_heading(node.inner_text(), level=1)
+            if "nieuwe-pagina" in klassen:
+                kop.paragraph_format.page_break_before = True
         elif node.tag == "h3":
             doc.add_heading(node.inner_text(), level=2)
         elif node.tag == "p":
