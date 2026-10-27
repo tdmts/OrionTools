@@ -56,6 +56,11 @@ def main(argv):
     if naam not in COMMANDOS:
         print(f"onbekend commando: {naam}\n\n{gebruik()}", file=sys.stderr)
         return 2
+    # In een pijp schrijft Python op Windows in cp1252, en een pijl of een ander teken buiten die
+    # tabel in een melding laat het commando dan crashen. Een console schrijft al UTF-8.
+    for stroom in (sys.stdout, sys.stderr):
+        if hasattr(stroom, "reconfigure"):
+            stroom.reconfigure(encoding="utf-8", errors="replace")
     module = importlib.import_module(COMMANDOS[naam][0])
     return module.main(rest) or 0
 
