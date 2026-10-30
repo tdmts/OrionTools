@@ -137,7 +137,11 @@ whatever the course's own pages use for their answers. What makes a good item:
 - **Four options** unless the question calls for three or five.
 - **A figure** is an existing file of the course, linked relatively (`../img/...`), with an `alt`.
   It goes into the zip. A remote image fails the export.
-- **Code or configuration** is a `<pre><code>` block and stays literal.
+- **Code or configuration** is a `<pre><code>` block and stays literal. Show **no Windows prompt**
+  in it: `C:\>` turns into megabytes of text in the ANS import, and a `>` before `ping` or
+  `nslookup` makes ANS refuse the repair of the block (403). The export stops on the first and
+  warns on the second; `codeblokken()` in `oriontools/export/qti.py` says what was seen. A Cisco
+  prompt (`Switch>enable`) is fine.
 - **The `div.oplossing` is always there**, also for a summative test: it is how the user checks
   your key, and it names the page the answer comes from. A link in it becomes plain text in ANS.
 - **The Dutch follows the course's `SCHRIJFSTIJL.md`**, on top of `../OrionTools/SCHRIJFSTIJL.md`:

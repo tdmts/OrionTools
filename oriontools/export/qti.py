@@ -69,7 +69,9 @@ QTI 3.0 zonder die proef opnieuw te doen.
 Een figuur (<img src> relatief) gaat mee in de zip, onder zijn pad in het vak,
 en staat in het manifest bij het item dat hem gebruikt. Een codeblok blijft
 een <pre>; de import van ANS knipt het in een <code> per regel, en ans-push
-zet het daarna terug (zie ans-codeblok). Een link wordt zijn tekst: in ANS bestaat de pagina niet waar hij
+zet het daarna terug (zie ans-codeblok). Een prompt als C:\\> in een codeblok
+stopt de export en een prompt > voor ping of nslookup geeft een melding; zie
+codeblokken(). Een link wordt zijn tekst: in ANS bestaat de pagina niet waar hij
 naartoe wees.
 
 IN ANS NAGEKEKEN
@@ -579,6 +581,45 @@ def lange_juiste(lijst, factor=1.15, marge=10):
     return meldingen
 
 
+PRE_RE = re.compile(r"<pre\b[^>]*>(.*?)</pre>", re.S)
+# Wat de import van ANS in een codeblok als vervangtekst leest: \& is de hele
+# match, \0 tot \9 een groep, \\ \' \` de rest van de reeks.
+TERUGVERWIJZING_RE = re.compile(r"\\[&\d\\'`]")
+# Een prompt > voor een commando dat een webfirewall voor ANS kent.
+PROMPT_RE = re.compile(r"(?m)>\s*(ping|nslookup)\b")
+
+
+def codeblokken(lijst):
+    """(fouten, meldingen) voor een codeblok dat ANS kapotmaakt of weigert.
+
+    De import van ANS knipt een codeblok in een <code> per regel (zie
+    ans-codeblok) en leest daarbij een backslash als in een vervangtekst: de
+    prompt C:\\> staat in de zip als C:\\&gt;, en \\& wordt de hele match. Op 30
+    oktober 2026 werd zo een vraag van de toets van labo TCP/IP met twee
+    prompts 36 MB tekst, met 65536 keer C:>. Dat is een fout, geen melding.
+
+    Een PATCH die zo'n blok terugzet, weigert ANS met een 403 van een
+    webfirewall zodra er een prompt > voor ping of nslookup staat, ook met <br>
+    tussen de regels; zonder prompt ging dezelfde vraag door. Alleen die twee
+    commando's zijn nagekeken. Switch>enable in de toets van labo Managed
+    Switch ging op 24 oktober 2026 wel door, dus een prompt op zich is het
+    niet. Dat is een melding: de import lukt, alleen het herstel niet.
+    """
+    fouten, meldingen = [], []
+    for nummer, stam, keuzes, _ in lijst:
+        for blok in PRE_RE.findall(stam + "".join(k for k, _ in keuzes)):
+            terug = TERUGVERWIJZING_RE.search(blok)
+            if terug:
+                fouten.append(f"vraag {nummer}: een backslash voor {terug.group()[1]} in een codeblok; "
+                              "de import van ANS vermenigvuldigt de regel (C:\\> wordt megabytes "
+                              "C:>). Laat de prompt weg")
+            commando = PROMPT_RE.search(html.unescape(re.sub(r"<[^>]+>", "", blok)))
+            if commando:
+                meldingen.append(f"vraag {nummer}: een prompt > voor {commando.group(1)} in een codeblok; "
+                                 "ANS weigert het herstel van het blok (403). Laat de prompt weg")
+    return fouten, meldingen
+
+
 def bouw(pagina, root, naam, schudden, feedback):
     """{zippad: bytes} van het pakket, de meldingen en het aantal vragen.
 
@@ -596,6 +637,10 @@ def bouw(pagina, root, naam, schudden, feedback):
     if scheef:
         meldingen.append(scheef)
     meldingen += lange_juiste(lijst)
+    fouten, codemeldingen = codeblokken(lijst)
+    if fouten:
+        raise Fout("\n".join(fouten))
+    meldingen += codemeldingen
 
     titel = paginatitel(tekst, pagina.stem)
     groep = groepen(tekst)
