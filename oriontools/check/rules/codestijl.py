@@ -10,6 +10,26 @@ OPERATOR_RE = re.compile(r"[A-Za-z0-9_\)\]](==|!=|<=|>=|&&|\|\||=(?!=))[A-Za-z0-
 # ook na een ingeklapte body ("if (x) { doe(); }"). Een initialiser (= {) valt
 # er nooit onder: daar staat geen ), else of do voor de accolade.
 KR_RE = re.compile(r"\) ?\{|\belse ?\{|\bdo ?\{")
+# Een collectie- of objectinitializer (new List<int>() { 1, 2 }) is geen K&R:
+# de accolade hoort bij het new achter een =, niet bij een blok.
+INITIALIZER_RE = re.compile(r"=\s*new\b[^;{]*\)\s*\{")
+# Een generiek type is geen vergelijking: List<int>, Dictionary<string, int>,
+# List<List<int>>, std::vector<int>. Beslist op 5 november 2026, toen de module
+# Lijsten van TP de eerste generics bracht en de regel List<int> las als
+# "List < int >"; --fix maakte er dat ook van. De binnenste eerst, tot er niets
+# meer verandert. Een vergelijking met && of || tussen < en > (a<b && c>d) valt
+# er niet onder: tussen de haken staan alleen typenamen en komma's.
+GENERIC_RE = re.compile(r"\b([A-Za-z_][\w.:]*)<\s*[A-Za-z_][\w.:]*(?:\[\])?\??"
+                        r"(?:\s*,\s*[A-Za-z_][\w.:]*(?:\[\])?\??)*\s*>")
+
+
+def generics_weg(c, vervang=r"\1"):
+    """De generieke typeargumenten uit gedecodeerde code (< en >, geen entiteiten)."""
+    while True:
+        nieuw = GENERIC_RE.sub(vervang, c)
+        if nieuw == c:
+            return c
+        c = nieuw
 
 
 def codeblok_re(ctx):
@@ -61,6 +81,7 @@ def krappe_operatoren(regel):
     c = re.sub(r"\s*//.*$", "", c).rstrip()
     if not re.search(r"[;{}(),]$", c):
         return []
+    c = generics_weg(c)
     c = re.sub(r"->|<<|>>", "@@", c)
     slecht = []
     if (re.search(r"[A-Za-z0-9_)\]]=[^=]", c)
@@ -82,8 +103,9 @@ def krappe_operatoren(regel):
 
 def kr_accolade(kaal):
     """Een openende accolade die niet op haar eigen regel staat (kaal: zonder //-commentaar)."""
+    zonder_init = INITIALIZER_RE.sub("=", _ontsnap_niet(kaal))
     return ((kaal.endswith("{") and kaal.strip() != "{" and "=" not in kaal)
-            or bool(KR_RE.search(kaal)))
+            or bool(KR_RE.search(zonder_init)))
 
 
 class EmDash(Regel):

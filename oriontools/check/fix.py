@@ -24,7 +24,7 @@ import subprocess
 import sys
 
 from .rules._gedeeld import lokaal_doel, orion_doelen
-from .rules.codestijl import codeblok_re
+from .rules.codestijl import GENERIC_RE, codeblok_re
 from .rules.links import URL_RE
 
 EMDASH_RE = re.compile(r"[ \t]*(?:&mdash;|—)[ \t]*")
@@ -77,6 +77,20 @@ def spatieer(regel):
     code = re.sub(r'("(?:[^"\\]|\\.)*")', parkeer, code)
     had_lt, had_gt, had_amp = "&lt;" in code, "&gt;" in code, "&amp;" in code
     code = code.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    # Een generiek type (List<int>) is geen vergelijking: geparkeerd onder een
+    # naam die er als identifier uitziet, zodat een buitenste List<List<int>> in
+    # de volgende ronde ook past. Voor de >> hieronder, want die sluit er twee.
+    generics = []
+
+    def parkeer_generic(m):
+        generics.append(m.group(0))
+        return f"__g{len(generics) - 1}__"
+
+    while True:
+        nieuw = GENERIC_RE.sub(parkeer_generic, code)
+        if nieuw == code:
+            break
+        code = nieuw
     code = code.replace("->", "\x02").replace("<<", "\x03").replace(">>", "\x04")
     code = re.sub(r"([+\-*/%&|^])=", "\\1\x12", code)
     for op, teken in (("==", "\x05"), ("!=", "\x06"), ("<=", "\x0e"), (">=", "\x0f"),
@@ -93,6 +107,11 @@ def spatieer(regel):
                       ("\x0e", "<="), ("\x06", "!="), ("\x05", "=="), ("\x04", ">>"),
                       ("\x03", "<<"), ("\x02", "->")):
         code = code.replace(teken, op)
+    while "__g" in code and generics:
+        nieuw = re.sub(r"__g(\d+)__", lambda m: generics[int(m.group(1))], code)
+        if nieuw == code:
+            break
+        code = nieuw
     if had_amp:
         code = code.replace("&", "&amp;")
     if had_lt:

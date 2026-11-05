@@ -43,6 +43,19 @@ class Spatieer(unittest.TestCase):
             with self.subTest(regel=regel):
                 self.assertEqual(fix.spatieer(regel), regel)
 
+    def test_generics_blijven_staan(self):
+        # Beslist op 5 november 2026 (TP, Lijsten): --fix maakte er List < int > van.
+        for voor, na in [
+            ("List&lt;int&gt; lijst=new List&lt;int&gt;();",
+             "List&lt;int&gt; lijst = new List&lt;int&gt;();"),
+            ("List&lt;List&lt;int&gt;&gt; r = new List&lt;List&lt;int&gt;&gt;();",
+             "List&lt;List&lt;int&gt;&gt; r = new List&lt;List&lt;int&gt;&gt;();"),
+            ("for(int i=0;i&lt;lijst.Count;i++)",
+             "for (int i = 0; i &lt; lijst.Count; i++)"),
+        ]:
+            with self.subTest(voor=voor):
+                self.assertEqual(fix.spatieer(voor), na)
+
     def test_commentaar_na_code(self):
         self.assertEqual(fix.spatieer("x=1; // a,b"), "x = 1; // a,b")
 

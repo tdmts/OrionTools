@@ -41,6 +41,26 @@ class CodeStijl(RegelTest):
                                           "plaintext")
                                      + "\n<p>Bij 0,17 Hz is <code>i=9</code>.</p>")})
 
+    def test_goed_generics_en_initializer(self):
+        # Beslist op 5 november 2026 (TP, Lijsten): < en > van een generiek type
+        # zijn geen vergelijking, en de accolade van een initializer geen K&R.
+        code = ("List&lt;int&gt; lijst = new List&lt;int&gt;();\n"
+                "List&lt;int&gt; getallen = new List&lt;int&gt;() { 1, -4, 99 };\n"
+                "Dictionary&lt;string, int&gt; d = new Dictionary&lt;string, int&gt;();\n"
+                "List&lt;List&lt;int&gt;&gt; rijen = new List&lt;List&lt;int&gt;&gt;();\n"
+                "std::vector&lt;int&gt; v;")
+        self.assertSchoon({P: pagina(blok(code, "csharp"))})
+
+    def test_fout_vergelijking_blijft_gemeld_naast_generic(self):
+        code = "List&lt;int&gt; lijst = new List&lt;int&gt;();\nbool b = i&lt;10;\nf();"
+        m = self.assertMeldt({P: pagina(blok(code, "csharp"))}, (P, "(vergelijking)"))
+        self.assertIn("i&lt;10", m[0][2])
+
+    def test_fout_kr_na_new_zonder_toekenning(self):
+        # Zonder = is het geen initializer: if (nieuw()) { blijft K&R.
+        self.assertMeldt({P: pagina(blok("void f()\n{\n    if (nieuw()) { doe(); }\n}"))},
+                         (P, "K&R"))
+
     def test_fout_kr_accolade(self):
         m = self.assertMeldt({P: pagina(blok("void loop() {\n}\n"))}, (P, "K&R"))
         self.assertIn("void loop() {", m[0][2])
