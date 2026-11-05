@@ -170,3 +170,9 @@ class ChecklistWiring(RegelTest):
                          ("Labo1/Exercises/A.html", "laadt checklist-sync.js niet"),
                          ("Labo1/Exercises/B.html", "labId: 'labo1'"),
                          ("Labo2/Exercises/C.html", "staat in labo2"))
+
+    def test_buiten_een_labomap_is_de_labid_vrij(self):
+        # TP: een map per oefenreeks, geen LaboN/. De labId moet er wel staan.
+        self.assertSchoon({"OefeningenSequentie1/Blink.html": self.checklist(lab="tp-sequentie1")})
+        self.assertMeldt({"OefeningenSequentie1/A.html": self.checklist(lab=None)},
+                         ("OefeningenSequentie1/A.html", "labId: '<labId>'"))

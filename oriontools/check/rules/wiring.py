@@ -39,7 +39,7 @@ class OrionCssWiring(Regel):
 
 CHECKLIST_RE = re.compile(r'class="checklist"')
 SYNC_RE = re.compile(r"checklist-sync\.js")
-INIT_RE = re.compile(r"""initChecklistSync\(\{\s*labId:\s*["'](labo[0-9]+)["']""")
+INIT_RE = re.compile(r"""initChecklistSync\(\{\s*labId:\s*["']([A-Za-z0-9_-]+)["']""")
 LABMAP_RE = re.compile(r"^Labo([0-9]+)/")
 
 
@@ -53,8 +53,12 @@ class ChecklistWiring(Regel):
     aan, en klopt N met de map LaboN/ waar de pagina in staat. Zonder
     checklist-sync.js blijft de checklist een lijst die niets onthoudt.
 
-    Van toepassing zodra een pagina een class="checklist" draagt; de vorm
-    laboN is het contract van checklist-sync.js zelf.
+    Van toepassing zodra een pagina een class="checklist" draagt. Buiten een
+    map LaboN/ (TP zet zijn oefeningen in een map per reeks, beslist op
+    5 november 2026) is de labId vrij, maar ze moet er staan. Kies er dan een
+    die geen ander vak gebruikt: alle cursussen delen de localStorage van
+    orion.hogent.be, en een labo1 van TP zou de vinkjes van labo1 in
+    Microcontrollers raken.
     """
 
     id = "checklist-wiring"
@@ -77,7 +81,7 @@ class ChecklistWiring(Regel):
             init = INIT_RE.search(tekst)
             if not init:
                 ctx.fout(pad, "heeft een checklist maar roept nooit initChecklistSync({ labId: "
-                              f"'{lab or 'laboN'}', exerciseId: '...' }}) aan")
+                              f"'{lab or '<labId>'}', exerciseId: '...' }}) aan")
             elif lab and init.group(1) != lab:
                 ctx.fout(pad, f"staat in {lab} maar roept initChecklistSync aan met labId "
                               f"'{init.group(1)}'")
